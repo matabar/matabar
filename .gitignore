@@ -1,0 +1,25 @@
+# Terraform / OpenTofu
+.terraform
+.terraform.*
+*.tfstate
+*.tfstate.backup
+*.tfstate.lock.info
+*.tfvars
+*.tfvars.json
+override.tf
+override.tf.json
+_override.tf
+_override.tf.json
+.terraformrc
+terraform.rc
+
+# Terragrunt
+.terragrunt-cache/
+terragrunt-debug.tfvars
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
