@@ -1,9 +1,9 @@
 include "root" {
-  path = find_in_parent_folders()
+  path = find_in_parent_folders("root.hcl")
 }
 
 locals {
-  root_vars = read_terragrunt_config(find_in_parent_folders("terragrunt.hcl"))
+  root_vars = read_terragrunt_config(find_in_parent_folders("root.hcl"))
   env_vars  = read_terragrunt_config(find_in_parent_folders("env.hcl"))
 }
 
