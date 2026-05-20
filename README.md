@@ -3,7 +3,7 @@
 Infrastructure management for personal projects using OpenTofu and Terragrunt.
 
 ## Directory Structure
-- `terragrunt.hcl`: Root configuration for providers and remote state.
+- `root.hcl`: Root configuration for providers and remote state.
 - `modules/`: Local, reusable OpenTofu modules.
 - `live/`: Live infrastructure configurations, organized by environment and region.
     - `live/terragrunt.hcl`: Global environment settings.
