@@ -21,6 +21,8 @@
     - Plan documentation updates as first-class citizens in every task.
 
 ## Workflow & Git
-- **Branching**: Mandatory `feature/<name>` branches.
+- **Branching**: 
+    - Mandatory `feature/<name>` branches.
+    - **NO DIRECT COMMITS TO MAIN**: Committing directly to the `main` branch is strictly forbidden. All changes must be merged via pull requests or internal branch merges following a successful plan and validation.
 - **Commits**: Strict **Conventional Commits**.
 - **Atomicity**: One logical change per commit.
