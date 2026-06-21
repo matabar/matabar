@@ -1,0 +1,12 @@
+#!/bin/bash
+
+echo "Validating infrastructure..."
+find . -name "terragrunt.hcl" -not -path "*/.*" -not -path "./.terragrunt-cache/*" -exec dirname {} \; | sort -u | while read dir; do
+  cd "$dir" || continue
+  terragrunt validate
+  if [ $? -ne 0 ]; then
+    echo "ERROR: Validation failed in $dir"
+    exit 1
+  fi
+  cd - > /dev/null
+done

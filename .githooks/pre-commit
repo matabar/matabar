@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# Prevent direct commits to main
+branch=$(git rev-parse --abbrev-ref HEAD)
+if [ "$branch" = "main" ]; then
+  echo "ERROR: Direct commits to the main branch are forbidden."
+  exit 1
+fi
+
+# Format all HCL and Terraform files
+echo "Formatting HCL and Terraform files..."
+find . -type f \( -name "*.hcl" -o -name "*.tf" \) -not -path "*/.*" -not -path "./.terragrunt-cache/*" | while read file; do
+  if [[ "$file" == *.hcl ]]; then
+    terragrunt hcl fmt "$(dirname "$file")" > /dev/null 2>&1
+  else
+    tofu fmt "$file" > /dev/null 2>&1
+  fi
+done
