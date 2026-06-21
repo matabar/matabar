@@ -7,7 +7,7 @@ resource "google_project" "project" {
 }
 
 resource "google_project_service" "services" {
-  for_each           = toset(var.enabled_services)
+  for_each           = toset(concat(var.bootstrap_services, var.enabled_services))
   project            = google_project.project.project_id
   service            = each.key
   disable_on_destroy = false
