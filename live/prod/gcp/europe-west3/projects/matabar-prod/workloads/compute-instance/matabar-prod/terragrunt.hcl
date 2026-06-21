@@ -7,7 +7,7 @@ include "provider" {
 }
 
 terraform {
-  source = "${get_repo_root()}/modules/gcp/vm"
+  source = "${get_repo_root()}/modules/gcp/compute-instance"
 }
 
 locals {
@@ -15,14 +15,14 @@ locals {
 }
 
 dependency "project" {
-  config_path = "../../project"
+  config_path = "../../../project"
   mock_outputs = {
     project_id = "mock-project-id"
   }
 }
 
 dependency "network" {
-  config_path = "../../network"
+  config_path = "../../../network"
   mock_outputs = {
     network_id    = "mock-network-id"
     subnetwork_id = "mock-subnet-id"
@@ -30,7 +30,7 @@ dependency "network" {
 }
 
 inputs = {
-  hostname     = "prod-vm-01"
+  hostname     = "matabar-prod"
   project_id   = dependency.project.outputs.project_id
   region       = local.region_vars.locals.region
   zone         = "${local.region_vars.locals.region}-a"

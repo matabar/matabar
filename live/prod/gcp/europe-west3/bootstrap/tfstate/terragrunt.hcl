@@ -20,7 +20,7 @@ remote_state {
 }
 
 terraform {
-  source = "${get_repo_root()}/modules/gcp/gcs-bucket"
+  source = "${get_repo_root()}/modules/gcp/storage-bucket"
 }
 
 locals {
