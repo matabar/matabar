@@ -18,5 +18,4 @@ inputs = {
   org_id           = null
   folder_id        = null
   enabled_services = ["compute.googleapis.com"]
-  region           = "europe-west3"
 }
