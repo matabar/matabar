@@ -1,12 +1,47 @@
 #!/bin/bash
+set -uo pipefail
 
-echo "Validating infrastructure..."
-find . -name "terragrunt.hcl" -not -path "*/.*" -not -path "./.terragrunt-cache/*" -exec dirname {} \; | sort -u | while read dir; do
-  cd "$dir" || continue
-  terragrunt validate
-  if [ $? -ne 0 ]; then
-    echo "ERROR: Validation failed in $dir"
-    exit 1
+# Validate only terragrunt stacks whose config changed in commits being pushed.
+dirs=""
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
+    base=$(git merge-base "$local_sha" main 2>/dev/null || true)
+    if [ -n "$base" ]; then
+      range="${base}..${local_sha}"
+    else
+      range="$local_sha"
+    fi
+  else
+    range="${remote_sha}..${local_sha}"
   fi
-  cd - > /dev/null
+
+  while IFS= read -r file; do
+    [ -n "$file" ] || continue
+    dir=$(dirname "$file")
+    case " $dirs " in
+      *" $dir "*) ;;
+      *) dirs="$dirs $dir" ;;
+    esac
+  done < <(git diff --name-only "$range" -- '**/terragrunt.hcl' 2>/dev/null || true)
 done
+
+dirs=$(echo "$dirs" | tr ' ' '\n' | sed '/^$/d' | sort -u)
+
+if [ -z "$dirs" ]; then
+  echo "No terragrunt.hcl changes in push; skipping validation."
+  exit 0
+fi
+
+echo "Validating changed infrastructure stacks..."
+failed=0
+for dir in $dirs; do
+  ( cd "$dir" && terragrunt validate ) || {
+    echo "ERROR: Validation failed in $dir"
+    failed=1
+  }
+done
+
+if [ "$failed" -ne 0 ]; then
+  echo "ERROR: Infrastructure validation failed. Push aborted."
+  exit 1
+fi
