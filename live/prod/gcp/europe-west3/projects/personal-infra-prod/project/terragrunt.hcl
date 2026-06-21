@@ -12,7 +12,7 @@ terraform {
 }
 
 inputs = {
-  name             = "matabar-infra-prod"
+  name             = "personal-infra-prod"
   project_id       = "matabar-infra-prod-7742"
   billing_account  = "01840C-61ACE5-5FE73D"
   org_id           = null
