@@ -17,6 +17,7 @@ while read -r local_ref local_sha remote_ref remote_sha; do
 
   while IFS= read -r file; do
     [ -n "$file" ] || continue
+    [ -f "$file" ] || continue
     dir=$(dirname "$file")
     case " $dirs " in
       *" $dir "*) ;;

@@ -20,6 +20,12 @@
     - Maintain `README.md` and `AGENTS.md` in sync with all changes.
     - Plan documentation updates as first-class citizens in every task.
 
+## Infrastructure Conventions
+- **State Backend**: All units use the GCS backend (`matabar-prod-tfstate`) defined in `root.hcl`.
+- **Bootstrap Tier**: `projects/matabar-prod/project` and `bootstrap/tfstate` intentionally override `remote_state` to a **local** backend. Do NOT remove these overrides — they break the bootstrap ordering (the project and the state bucket must exist before GCS-backed state is usable).
+- **Apply Order**: project -> tfstate bucket -> network -> vm (see `README.md`).
+- **Secrets**: Never commit SSH private keys, `*.tfstate`, or `*.tfvars`. SSH access is firewalled to a single source IP via `ssh_source_ranges`.
+
 ## Workflow & Git
 - **Branching**: 
     - Mandatory `feature/<name>` branches.

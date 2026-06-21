@@ -1,28 +1,15 @@
 locals {
-  billing_account = "01840C-61ACE5-5FE73D"
-  region          = "europe-west3"
+  state_bucket = "matabar-prod-tfstate"
 }
 
-# Generate a Google provider block
-generate "provider" {
-  path      = "provider.tf"
-  if_exists = "overwrite_terragrunt"
-  contents  = <<EOF
-provider "google" {
-  region = "${local.region}"
-}
-
-provider "google-beta" {
-  region = "${local.region}"
-}
-EOF
-}
-
-# Remote state configuration (Local for now, easily migratable to GCS)
+# Remote state in GCS for all units. Bootstrap-tier units (the project and
+# the state bucket itself) override this back to a local backend to avoid the
+# chicken-and-egg problem of needing the bucket before it exists.
 remote_state {
-  backend = "local"
+  backend = "gcs"
   config = {
-    path = "${get_parent_terragrunt_dir()}/${path_relative_to_include()}/terraform.tfstate"
+    bucket = local.state_bucket
+    prefix = path_relative_to_include()
   }
   generate = {
     path      = "backend.tf"
