@@ -1,4 +1,5 @@
 #!/bin/bash
+set -uo pipefail
 
 # Prevent direct commits to main
 branch=$(git rev-parse --abbrev-ref HEAD)
@@ -7,12 +8,32 @@ if [ "$branch" = "main" ]; then
   exit 1
 fi
 
-# Format all HCL and Terraform files
-echo "Formatting HCL and Terraform files..."
-find . -type f \( -name "*.hcl" -o -name "*.tf" \) -not -path "*/.*" -not -path "./.terragrunt-cache/*" | while read file; do
+# Format only staged HCL/TF files, then re-stage them so the
+# formatted result is what actually gets committed.
+echo "Formatting staged HCL and Terraform files..."
+
+staged=$(git diff --cached --name-only --diff-filter=ACM -- '*.hcl' '*.tf' \
+  | grep -v '\.terragrunt-cache/' || true)
+
+formatted_dirs=" "
+while IFS= read -r file; do
+  [ -n "$file" ] || continue
+  [ -f "$file" ] || continue
   if [[ "$file" == *.hcl ]]; then
-    terragrunt hcl fmt "$(dirname "$file")" > /dev/null 2>&1
+    dir="$(dirname "$file")"
+    # Avoid formatting the same directory twice.
+    case "$formatted_dirs" in
+      *" $dir "*) : ;;
+      *)
+        terragrunt hclfmt --working-dir "$dir" >/dev/null 2>&1 \
+          || terragrunt hclfmt "$dir" >/dev/null 2>&1 || true
+        formatted_dirs="$formatted_dirs$dir "
+        ;;
+    esac
   else
-    tofu fmt "$file" > /dev/null 2>&1
+    tofu fmt "$file" >/dev/null 2>&1 || true
   fi
-done
+  git add -- "$file"
+done <<EOF
+$staged
+EOF
