@@ -24,7 +24,8 @@
 - **Cloud Providers**: GCP under `live/prod/gcp/`; Databricks under `live/prod/databricks/`. Each provider has its own `provider.hcl` that generates the provider block.
 - **State Backend**: All units use the GCS backend (`matabar-prod-tfstate`) defined in `root.hcl`.
 - **Bootstrap Tier**: `projects/matabar-prod/project` and `bootstrap/tfstate` intentionally override `remote_state` to a **local** backend. Do NOT remove these overrides — they break the bootstrap ordering (the project and the state bucket must exist before GCS-backed state is usable).
-- **Apply Order**: GCP: project -> tfstate bucket -> network -> vm. Databricks Lakebase is independent (see `README.md`).
+- **Apply Order**: GCP: project -> tfstate bucket -> network -> compute-instance/matabar-prod. Databricks Lakebase is independent (see `README.md`).
+- **Live Layout**: Workloads live under `workloads/<type>/<name>/` (e.g. `compute-instance/matabar-prod`, `lakebase/matabar-prod`).
 - **Secrets**: Never commit SSH private keys, Databricks CLI credentials (`~/.databrickscfg`), `*.tfstate`, or `*.tfvars`. Databricks auth uses the CLI profile `matabar` via `auth_type = "databricks-cli"` (override with `TF_VAR_databricks_profile`). SSH access is firewalled to a single source IP via `ssh_source_ranges`.
 - **OpenTofu + Databricks**: The Databricks provider works with OpenTofu but is considered experimental upstream. Pin provider versions in modules.
 

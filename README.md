@@ -8,8 +8,8 @@ Infrastructure management for personal projects using OpenTofu and Terragrunt.
 - `modules/`: Reusable OpenTofu modules, organized by cloud provider.
   - `modules/gcp/project`: GCP project and API enablement
   - `modules/gcp/network`: VPC, subnetwork, and firewall rules
-  - `modules/gcp/vm`: Compute instance (service account, optional static IP, SSH metadata)
-  - `modules/gcp/gcs-bucket`: Versioned GCS bucket (used for Terraform state)
+  - `modules/gcp/compute-instance`: Compute instance (service account, optional static IP, SSH metadata)
+  - `modules/gcp/storage-bucket`: Versioned GCS bucket (used for Terraform state)
   - `modules/databricks/lakebase`: Lakebase Autoscaling project, branch, endpoint, role, database
 - `live/`: Live infrastructure configurations.
   - `live/terragrunt.hcl`: Global Terragrunt settings
@@ -21,7 +21,7 @@ Infrastructure management for personal projects using OpenTofu and Terragrunt.
   - `live/prod/gcp/europe-west3/projects/matabar-prod/`: Prod GCP project stack
     - `project/`: GCP project (local backend, bootstrap tier)
     - `network/`: VPC, subnet, firewall
-    - `workloads/prod-vm-01/`: Compute VM
+    - `workloads/compute-instance/matabar-prod/`: Compute VM
 
 ## State Backend
 
@@ -49,8 +49,8 @@ terragrunt apply
 cd ../../projects/matabar-prod/network
 terragrunt apply
 
-# 4. VM (GCS backend) — outputs the static external IP
-cd ../workloads/prod-vm-01
+# 4. Compute instance (GCS backend) — outputs the static external IP
+cd ../workloads/compute-instance/matabar-prod
 terragrunt apply
 terragrunt output external_ip
 ```
@@ -109,9 +109,9 @@ The stack is independent of GCP — no Terragrunt dependencies on GCP units.
 - After applying the VM, set the host in `~/.ssh/config`:
 
 ```bash
-ip=$(cd live/prod/gcp/europe-west3/projects/matabar-prod/workloads/prod-vm-01 && terragrunt output -raw external_ip)
-# update the HostName for `Host prod-vm-01` in ~/.ssh/config to $ip
-ssh prod-vm-01
+ip=$(cd live/prod/gcp/europe-west3/projects/matabar-prod/workloads/compute-instance/matabar-prod && terragrunt output -raw external_ip)
+# update the HostName for `Host matabar-prod` in ~/.ssh/config to $ip
+ssh matabar-prod
 ```
 
 ## Git Hooks
