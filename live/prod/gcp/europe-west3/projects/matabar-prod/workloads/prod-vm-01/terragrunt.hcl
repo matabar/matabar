@@ -16,6 +16,9 @@ locals {
 
 dependency "project" {
   config_path = "../../project"
+  mock_outputs = {
+    project_id = "mock-project-id"
+  }
 }
 
 dependency "network" {
@@ -29,8 +32,18 @@ dependency "network" {
 inputs = {
   hostname     = "prod-vm-01"
   project_id   = dependency.project.outputs.project_id
+  region       = local.region_vars.locals.region
   zone         = "${local.region_vars.locals.region}-a"
   machine_type = "e2-medium"
   network      = dependency.network.outputs.network_id
   subnetwork   = dependency.network.outputs.subnetwork_id
+
+  enable_external_ip = true
+  ssh_user           = "matan"
+  ssh_pubkey         = trimspace(file("${get_env("HOME")}/.ssh/matabar-prod.pub"))
+  tags               = ["ssh"]
+  labels = {
+    environment = "prod"
+    managed_by  = "terragrunt"
+  }
 }
