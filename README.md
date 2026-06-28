@@ -10,11 +10,8 @@ Infrastructure management for personal projects using OpenTofu and Terragrunt.
   - `modules/gcp/network`: VPC, subnetwork, and firewall rules
   - `modules/gcp/compute-instance`: Compute instance (service account, optional static IP, SSH metadata)
   - `modules/gcp/storage-bucket`: Versioned GCS bucket (used for Terraform state)
-  - `modules/databricks/lakebase`: Lakebase Autoscaling project, branch, endpoint, role, database
 - `live/`: Live infrastructure configurations.
   - `live/terragrunt.hcl`: Global Terragrunt settings
-  - `live/prod/databricks/provider.hcl`: Generated Databricks provider block
-  - `live/prod/databricks/workloads/lakebase/matabar-prod/`: Lakebase production database
   - `live/prod/gcp/provider.hcl`: Generated Google provider block
   - `live/prod/gcp/europe-west3/region.hcl`: Region setting consumed by units
   - `live/prod/gcp/europe-west3/bootstrap/tfstate/`: GCS state bucket (local backend)
@@ -54,50 +51,6 @@ cd ../workloads/compute-instance/matabar-prod
 terragrunt apply
 terragrunt output external_ip
 ```
-
-## Databricks Lakebase
-
-Lakebase Autoscaling is managed via the `databricks/databricks` provider. Authentication
-uses the **Databricks CLI** profile stored in `~/.databrickscfg` — credentials are
-never committed to this repository.
-
-### Prerequisites (one-time)
-
-1. [Install the Databricks CLI](https://docs.databricks.com/dev-tools/cli/install.html).
-2. Log in to your workspace and create a profile (e.g. `matabar`):
-
-```bash
-databricks auth login --profile matabar
-```
-
-3. Verify the profile works:
-
-```bash
-databricks auth profiles --profile matabar
-databricks current-user me --profile matabar
-```
-
-Your user needs permission to create Lakebase projects (typically **Admin** on the
-workspace for the initial apply). After the project is created, ensure your account
-retains **CAN MANAGE** on the Lakebase project for ongoing Terraform updates.
-
-To use a different profile name, set `TF_VAR_databricks_profile=<name>` or override
-`DATABRICKS_CONFIG_PROFILE` before running Terragrunt.
-
-> OpenTofu with the Databricks provider is supported but considered experimental
-> by Databricks. Pin the provider version and run `terragrunt plan` before apply.
-
-### Apply
-
-```bash
-cd live/prod/databricks/workloads/lakebase/matabar-prod
-terragrunt init
-terragrunt plan
-terragrunt apply
-terragrunt output
-```
-
-The stack is independent of GCP — no Terragrunt dependencies on GCP units.
 
 ## SSH Access
 
