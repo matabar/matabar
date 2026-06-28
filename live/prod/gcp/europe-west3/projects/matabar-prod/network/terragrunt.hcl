@@ -27,5 +27,5 @@ inputs = {
   region     = local.region_vars.locals.region
 
   # Restrict SSH to your current public IP (dynamic ISP address; update when it changes).
-  ssh_source_ranges = ["203.0.113.10/32"]
+  ssh_source_ranges = ["203.0.113.11/32"]
 }
