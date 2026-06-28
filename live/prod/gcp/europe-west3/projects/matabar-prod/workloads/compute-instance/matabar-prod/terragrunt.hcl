@@ -12,6 +12,7 @@ terraform {
 
 locals {
   region_vars = read_terragrunt_config(find_in_parent_folders("region.hcl"))
+  owner_email = "owner@example.com"
 }
 
 dependency "project" {
@@ -41,9 +42,18 @@ inputs = {
   enable_external_ip = true
   ssh_user           = "matan"
   ssh_pubkey         = trimspace(file("${get_env("HOME")}/.ssh/matabar-prod.pub"))
-  tags               = ["ssh"]
+  tags               = ["ssh", "https"]
   labels = {
     environment = "prod"
     managed_by  = "terragrunt"
   }
+
+  iap_tunnel_members = ["user:${local.owner_email}"]
+
+  enable_web_stack  = true
+  duckdns_subdomain = "matabar"
+  web_domain        = "matabar.duckdns.org"
+  certbot_email     = get_env("TF_VAR_certbot_email", local.owner_email)
+  duckdns_token     = get_env("TF_VAR_duckdns_token", "")
+  app_upstream_port = 8080
 }
