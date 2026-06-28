@@ -81,6 +81,14 @@ terragrunt apply
 terragrunt output external_ip
 ```
 
+### Terragrunt dependencies
+
+Downstream stacks reference upstream outputs via `dependency` blocks. Each dependency defines `mock_outputs` — placeholder values Terragrunt substitutes when upstream state is unavailable. Mocks are used only for `init`, `validate`, and `plan` (via `mock_outputs_allowed_terraform_commands`); `apply` always requires real upstream outputs.
+
+This lets you run `terragrunt validate` or `plan` on a stack before its dependencies are applied (e.g. on a fresh clone). The pre-push hook runs `terragrunt validate` on changed stacks and relies on mocks when upstream state is missing.
+
+When adding a new `dependency.*.outputs.*` reference in `inputs`, add the matching key to that dependency's `mock_outputs`.
+
 The compute module bootstraps the VM on **first boot** via cloud-init:
 
 - Docker + docker-compose (placeholder `whoami` on `127.0.0.1:8080`)
