@@ -29,5 +29,5 @@ inputs = {
   billing_account  = "01840C-61ACE5-5FE73D"
   org_id           = null
   folder_id        = null
-  enabled_services = ["compute.googleapis.com"]
+  enabled_services = ["compute.googleapis.com", "iap.googleapis.com"]
 }
