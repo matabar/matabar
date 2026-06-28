@@ -4,7 +4,7 @@ package_upgrade: true
 
 packages:
   - docker.io
-  - docker-compose-plugin
+  - docker-compose
   - nginx
   - certbot
   - python3-certbot-nginx
@@ -58,7 +58,7 @@ ${indent(6, nginx_site_content)}
 
 runcmd:
   - systemctl enable --now docker
-  - docker compose -f /opt/app/docker-compose.yml up -d
+  - docker-compose -f /opt/app/docker-compose.yml up -d
   - rm -f /etc/nginx/sites-enabled/default
   - ln -sf /etc/nginx/sites-available/${web_domain} /etc/nginx/sites-enabled/${web_domain}
   - nginx -t
