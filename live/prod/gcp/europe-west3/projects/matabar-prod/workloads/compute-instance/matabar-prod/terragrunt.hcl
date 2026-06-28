@@ -18,8 +18,9 @@ locals {
 dependency "project" {
   config_path = "../../../project"
   mock_outputs = {
-    project_id = "mock-project-id"
+    project_id = "matabar-prod-294f"
   }
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
 }
 
 dependency "network" {
@@ -28,6 +29,7 @@ dependency "network" {
     network_id    = "mock-network-id"
     subnetwork_id = "mock-subnet-id"
   }
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
 }
 
 inputs = {
