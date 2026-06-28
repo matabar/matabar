@@ -26,7 +26,8 @@
 - **Bootstrap Tier**: `projects/matabar-prod/project` and `bootstrap/tfstate` intentionally override `remote_state` to a **local** backend. Do NOT remove these overrides — they break the bootstrap ordering (the project and the state bucket must exist before GCS-backed state is usable).
 - **Apply Order**: GCP: project -> tfstate bucket -> network -> compute-instance/matabar-prod.
 - **Live Layout**: Workloads live under `workloads/<type>/<name>/` (e.g. `compute-instance/matabar-prod`).
-- **Secrets**: Never commit SSH private keys, `*.tfstate`, or `*.tfvars`. SSH access is firewalled to a single source IP via `ssh_source_ranges`.
+- **Secrets**: Never commit SSH private keys, DuckDNS tokens, `*.tfstate`, `*.tfvars`, or `.env`. Copy `.env.example` → `.env` at the repo root and `source` it before apply. SSH uses GCP IAP (`35.235.240.0/20`).
+- **Web Stack**: VM bootstrap (Docker, nginx, certbot) is defined in `modules/gcp/compute-instance/templates/` and applied via cloud-init `user-data` on first boot. DuckDNS A record is synced by Terraform `local-exec` when the static IP changes.
 
 ## Workflow & Git
 - **Branching**: 
