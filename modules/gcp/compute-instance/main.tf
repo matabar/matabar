@@ -49,9 +49,7 @@ resource "google_compute_instance" "vm" {
     }
   }
 
-  metadata = var.ssh_pubkey != "" ? {
-    ssh-keys = "${var.ssh_user}:${var.ssh_pubkey}"
-  } : {}
+  metadata = local.instance_metadata
 
   service_account {
     email  = google_service_account.vm.email
