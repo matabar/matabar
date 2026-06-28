@@ -35,3 +35,34 @@ variable "labels" {
   type    = map(string)
   default = {}
 }
+
+variable "enable_web_stack" {
+  type        = bool
+  description = "Bootstrap Docker, nginx, and certbot via cloud-init user-data."
+  default     = false
+}
+
+variable "web_domain" {
+  type        = string
+  description = "Public FQDN for nginx and Let's Encrypt (e.g. matabar.duckdns.org)."
+  default     = ""
+}
+
+variable "certbot_email" {
+  type        = string
+  description = "Email for Let's Encrypt registration. Pass via TF_VAR_certbot_email."
+  sensitive   = true
+  default     = ""
+}
+
+variable "app_upstream_port" {
+  type        = number
+  description = "Local port nginx proxies to (docker-compose binds 127.0.0.1:port)."
+  default     = 8080
+}
+
+variable "docker_compose_content" {
+  type        = string
+  description = "Full docker-compose.yml body. Empty uses the module default template."
+  default     = ""
+}
