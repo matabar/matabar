@@ -28,6 +28,22 @@ resource "google_compute_firewall" "ssh" {
   target_tags   = ["ssh"]
 }
 
+# Allow HTTP/HTTPS to instances tagged for web traffic.
+resource "google_compute_firewall" "https" {
+  count   = length(var.https_source_ranges) > 0 ? 1 : 0
+  name    = "${var.network_name}-allow-https"
+  network = google_compute_network.vpc.name
+  project = var.project_id
+
+  allow {
+    protocol = "tcp"
+    ports    = ["80", "443"]
+  }
+
+  source_ranges = var.https_source_ranges
+  target_tags   = var.https_target_tags
+}
+
 # Allow traffic within the VPC subnet.
 resource "google_compute_firewall" "internal" {
   name    = "${var.network_name}-allow-internal"
