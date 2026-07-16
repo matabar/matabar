@@ -17,6 +17,9 @@ terraform.rc
 .terragrunt-cache/
 terragrunt-debug.tfvars
 
+# Local secrets (project root only — never commit)
+.env
+
 # Logs
 *.log
 
