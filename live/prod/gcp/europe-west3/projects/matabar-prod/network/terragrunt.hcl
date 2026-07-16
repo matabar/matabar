@@ -26,6 +26,8 @@ inputs = {
   project_id = dependency.project.outputs.project_id
   region     = local.region_vars.locals.region
 
-  # Restrict SSH to your current public IP (dynamic ISP address; update when it changes).
-  ssh_source_ranges = ["203.0.113.11/32"]
+  # IAP TCP forwarding range — SSH from anywhere via gcloud IAP tunnel.
+  ssh_source_ranges = ["35.235.240.0/20"]
+
+  https_source_ranges = ["0.0.0.0/0"]
 }
