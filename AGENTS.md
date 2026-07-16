@@ -36,3 +36,8 @@
     - **Enforcement**: This is enforced via a local git pre-commit hook. Run `git config core.hooksPath .githooks` to set it up. All changes must be merged via pull requests or internal branch merges following a successful plan and validation.
 - **Commits**: Strict **Conventional Commits**.
 - **Atomicity**: One logical change per commit.
+- **Worktrees**: When creating git worktrees (`/worktree`, split-to-PRs, parallel feature work):
+    - Use the **git branch name** as the worktree directory name (slashes preserved).
+    - Do **not** prefix with PR numbers (`pr1-`, `pr2-`, etc.).
+    - Path pattern: `~/.cursor/worktrees/<WORKTREE_ID>/<branch-name>/` (e.g. `feature/network-https-ingress`, not `pr1-feature/network-https-ingress`).
+    - For multi-repo batches under one `WORKTREE_ID`, keep the branch-name leaf; do not insert numeric PR ordinals.
