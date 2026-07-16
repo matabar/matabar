@@ -34,9 +34,10 @@ if [ -z "$dirs" ]; then
 fi
 
 echo "Validating changed infrastructure stacks..."
+repo_root="$(git rev-parse --show-toplevel)"
 failed=0
 for dir in $dirs; do
-  ( cd "$dir" && terragrunt validate ) || {
+  ( cd "$repo_root/$dir" && unset GIT_DIR && terragrunt validate ) || {
     echo "ERROR: Validation failed in $dir"
     failed=1
   }
