@@ -30,8 +30,9 @@ locals {
 dependency "project" {
   config_path = "../../projects/matabar-prod/project"
   mock_outputs = {
-    project_id = "mock-project-id"
+    project_id = "matabar-prod-294f"
   }
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
 }
 
 inputs = {
