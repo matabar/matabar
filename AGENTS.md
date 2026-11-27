@@ -24,15 +24,16 @@
 - **Cloud Providers**: GCP under `live/prod/gcp/`. The provider block is generated via `provider.hcl`.
 - **State Backend**: All units use the GCS backend (`matabar-prod-tfstate`) defined in `root.hcl`.
 - **Bootstrap Tier**: `projects/matabar-prod/project` and `bootstrap/tfstate` intentionally override `remote_state` to a **local** backend. Do NOT remove these overrides — they break the bootstrap ordering (the project and the state bucket must exist before GCS-backed state is usable).
-- **Apply Order**: GCP: project -> tfstate bucket -> network -> compute-instance/matabar-prod.
+- **Apply Order**: GCP: project -> tfstate bucket. Later units document their own place in this order. Do not apply from a cloud agent; the owner applies locally.
 - **Dependency mocks**: Every `dependency` block that feeds `inputs` must define `mock_outputs` for each referenced output and `mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]`. Mocks are never used on `apply`.
-- **Live Layout**: Workloads live under `workloads/<type>/<name>/` (e.g. `compute-instance/matabar-prod`).
-- **Secrets**: Never commit SSH private keys, DuckDNS tokens, `*.tfstate`, `*.tfvars`, or `.env`. Copy `.env.example` → `.env` at the repo root and `source` it before apply. SSH uses GCP IAP (`35.235.240.0/20`).
-- **Web Stack**: VM bootstrap (Docker, nginx, certbot) is defined in `modules/gcp/compute-instance/templates/` and applied via cloud-init `user-data` on first boot. DuckDNS A record is synced by Terraform `local-exec` when the static IP changes.
+- **Live Layout**: Units live under `live/prod/gcp/europe-west3/` (`projects/matabar-prod/` and `bootstrap/`).
+- **Secrets**: Never commit `*.tfstate`, `*.tfvars`, `.env`, PEM files, or credential JSON. There is no VM and no SSH key in this repo.
 
 ## Workflow & Git
 - **Branching**: 
     - Mandatory `feature/<name>` branches.
+    - **One concern per pull request**. Do not mix unrelated changes. A PR must be reviewable on its own.
+    - **Stack dependent work**. Branch from the previous PR and target that branch. Independent work branches from `main`.
     - **NO DIRECT COMMITS TO MAIN**: Committing directly to the `main` branch is strictly forbidden. 
     - **Enforcement**: This is enforced via a local git pre-commit hook. Run `git config core.hooksPath .githooks` to set it up. All changes must be merged via pull requests or internal branch merges following a successful plan and validation.
 - **Commits**: Strict **Conventional Commits**.
@@ -40,5 +41,5 @@
 - **Worktrees**: When creating git worktrees (`/worktree`, split-to-PRs, parallel feature work):
     - Use the **git branch name** as the worktree directory name (slashes preserved).
     - Do **not** prefix with PR numbers (`pr1-`, `pr2-`, etc.).
-    - Path pattern: `~/.cursor/worktrees/<WORKTREE_ID>/<branch-name>/` (e.g. `feature/network-https-ingress`, not `pr1-feature/network-https-ingress`).
+    - Path pattern: `~/.cursor/worktrees/<WORKTREE_ID>/<branch-name>/` (e.g. `feature/dns-zone`, not `pr1-feature/dns-zone`).
     - For multi-repo batches under one `WORKTREE_ID`, keep the branch-name leaf; do not insert numeric PR ordinals.
