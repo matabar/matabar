@@ -72,6 +72,25 @@ When adding a new `dependency.*.outputs.*` reference in `inputs`, add the matchi
 
 Do not read outputs from the local-backend units (`project`, `bootstrap/*`). Their state lives only on the machine that applied them, so CI and `init -backend=false` cannot read it. Units take the project id and the state bucket from `live/prod/env.hcl` and list bootstrap units in a `dependencies` block for apply order only.
 
+## GitHub Actions identity
+
+`bootstrap/github-wif` is a bootstrap-tier unit with **local** state. Apply it
+with your user credentials after the project and the state bucket. It creates
+a Workload Identity pool and two service accounts:
+
+- `github-tf-plan` can read the project and the state bucket. Pull-request
+  plans use it and do not lock state.
+- `github-tf-apply` can write state and lock it. Only a token minted for
+  `refs/heads/main` in the `production` GitHub environment can impersonate it.
+
+CI never plans or applies this unit. There are no JSON service-account keys.
+After apply, copy the outputs into GitHub repository variables
+`WIF_PLAN_PROVIDER`, `WIF_PLAN_SERVICE_ACCOUNT`, `WIF_APPLY_PROVIDER`, and
+`WIF_APPLY_SERVICE_ACCOUNT`.
+
+Back up `bootstrap/github-wif/terraform.tfstate`. It is gitignored. Losing it
+means importing the pool and service accounts.
+
 ## Git Hooks
 
 Enable local hooks (blocks direct commits to `main`, auto-formats and re-stages

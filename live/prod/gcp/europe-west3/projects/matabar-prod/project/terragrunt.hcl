@@ -37,5 +37,8 @@ inputs = {
   folder_id       = local.env.folder_id
   enabled_services = [
     "storage.googleapis.com",
+    "iam.googleapis.com",
+    "iamcredentials.googleapis.com",
+    "sts.googleapis.com",
   ]
 }
