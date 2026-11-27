@@ -47,7 +47,7 @@ dependencies {
 inputs = {
   project_id        = local.env.project_id
   state_bucket      = local.env.state_bucket
-  github_repository = "matabar/personal-infra"
+  github_repository = "matabar/matabar"
   github_owner      = "matabar"
 
   plan_project_roles = [
