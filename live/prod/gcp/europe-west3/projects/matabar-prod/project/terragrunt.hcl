@@ -30,10 +30,12 @@ terraform {
 }
 
 inputs = {
-  name             = local.env.project_name
-  project_id       = local.env.project_id
-  billing_account  = local.env.billing_account
-  org_id           = local.env.org_id
-  folder_id        = local.env.folder_id
-  enabled_services = []
+  name            = local.env.project_name
+  project_id      = local.env.project_id
+  billing_account = local.env.billing_account
+  org_id          = local.env.org_id
+  folder_id       = local.env.folder_id
+  enabled_services = [
+    "storage.googleapis.com",
+  ]
 }

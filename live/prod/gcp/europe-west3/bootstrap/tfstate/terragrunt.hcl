@@ -6,8 +6,9 @@ include "provider" {
   path = "${get_repo_root()}/live/prod/gcp/provider.hcl"
 }
 
-# Bootstrap-tier: this unit creates the very bucket that backs remote state,
-# so it must keep its own state local.
+# Bootstrap-tier: this unit creates the bucket that backs remote state, so it
+# keeps its own state local. Apply it with user credentials after the project
+# unit. CI does not apply this unit.
 remote_state {
   backend = "local"
   config = {
@@ -24,19 +25,20 @@ terraform {
 }
 
 locals {
+  env         = read_terragrunt_config(find_in_parent_folders("env.hcl")).locals
   region_vars = read_terragrunt_config(find_in_parent_folders("region.hcl"))
 }
 
 dependency "project" {
   config_path = "../../projects/matabar-prod/project"
   mock_outputs = {
-    project_id = "matabar-prod-294f"
+    project_id = "matabar-online-prod"
   }
   mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
 }
 
 inputs = {
-  name       = "matabar-prod-tfstate"
+  name       = local.env.state_bucket
   project_id = dependency.project.outputs.project_id
   location   = local.region_vars.locals.region
 }

@@ -20,7 +20,9 @@ This repository creates the GCP project and the remote state bucket. It does not
 
 ## State Backend
 
-All units store state in the GCS bucket `matabar-prod-tfstate` (configured in `root.hcl`).
+All units store state in the GCS bucket named by `state_bucket` in `live/prod/env.hcl`
+(`matabar-prod-tfstate`). `root.hcl` reads that value. The bucket blocks public
+access, uses uniform bucket-level access, and keeps object versions.
 Two bootstrap-tier units keep their state **local** to avoid a chicken-and-egg
 dependency on the bucket:
 

@@ -4,6 +4,7 @@ resource "google_storage_bucket" "bucket" {
   location = var.location
 
   force_destroy               = var.force_destroy
+  public_access_prevention    = "enforced"
   uniform_bucket_level_access = true
 
   versioning {
@@ -21,5 +22,9 @@ resource "google_storage_bucket" "bucket" {
         with_state         = "ARCHIVED"
       }
     }
+  }
+
+  lifecycle {
+    prevent_destroy = true
   }
 }

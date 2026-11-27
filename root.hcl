@@ -1,10 +1,11 @@
 locals {
-  state_bucket = "matabar-prod-tfstate"
+  env_config   = read_terragrunt_config("${get_repo_root()}/live/prod/env.hcl")
+  state_bucket = local.env_config.locals.state_bucket
 }
 
-# Remote state in GCS for all units. Bootstrap-tier units (the project and
-# the state bucket itself) override this back to a local backend to avoid the
-# chicken-and-egg problem of needing the bucket before it exists.
+# Remote state in GCS for every unit that is not bootstrap-tier.
+# The project and the state bucket override this back to a local backend:
+# the bucket cannot store state until it exists.
 remote_state {
   backend = "gcs"
   config = {

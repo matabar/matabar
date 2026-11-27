@@ -12,4 +12,7 @@ locals {
   # Cloud Identity or Workspace, set exactly one of these (the other stays null).
   org_id    = null
   folder_id = null
+
+  # Must match the bucket created by bootstrap/tfstate. root.hcl reads this.
+  state_bucket = "matabar-prod-tfstate"
 }

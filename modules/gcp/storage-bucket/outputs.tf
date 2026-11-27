@@ -1,7 +1,9 @@
 output "name" {
-  value = google_storage_bucket.bucket.name
+  description = "Bucket name."
+  value       = google_storage_bucket.bucket.name
 }
 
 output "url" {
-  value = google_storage_bucket.bucket.url
+  description = "gs:// URL of the bucket."
+  value       = google_storage_bucket.bucket.url
 }
