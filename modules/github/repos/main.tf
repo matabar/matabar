@@ -15,9 +15,10 @@ resource "github_repository" "infra" {
   # trivy:ignore:AVD-GIT-0001
   visibility = "public"
 
-  has_issues   = true
-  has_projects = true
-  has_wiki     = false
+  has_issues           = true
+  has_projects         = true
+  has_wiki             = false
+  vulnerability_alerts = true
 
   # Linear history: squash or rebase, never a merge commit.
   allow_merge_commit     = false
@@ -34,16 +35,19 @@ resource "github_repository" "infra" {
 }
 
 resource "github_repository" "landing" {
-  name         = var.landing_repository_name
-  description  = var.landing_repository_description
+  name        = var.landing_repository_name
+  description = var.landing_repository_description
+  # GitHub Pages on the free plan is only available for a public repository.
+  # trivy:ignore:AVD-GIT-0001
   visibility   = "public"
   homepage_url = "https://${var.pages_domain}"
   auto_init    = true
   topics       = ["github-pages"]
 
-  has_issues   = true
-  has_projects = false
-  has_wiki     = false
+  has_issues           = true
+  has_projects         = false
+  has_wiki             = false
+  vulnerability_alerts = true
 
   allow_merge_commit     = false
   allow_squash_merge     = true
