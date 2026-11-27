@@ -110,6 +110,8 @@ The first three units keep **local** state. Back up these gitignored files:
 - `infra/live/prod/gcp/europe-west3/bootstrap/tfstate/terraform.tfstate`
 - `infra/live/prod/gcp/europe-west3/bootstrap/github-wif/terraform.tfstate`
 
+If these files predate the `infra/` layout, move them by hand from the old `live/...` unit directories to the matching `infra/live/...` directories. Git does not move untracked files.
+
 Seed the remote state of the two CI-managed units once, with the same user
 credentials. On the first `init` the GCS backend writes a lock to create the
 empty `default.tfstate`, and the read-only plan identity cannot write, so the

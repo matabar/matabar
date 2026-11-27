@@ -82,7 +82,7 @@ jobs:
       - name: Setup tools
         uses: ./.github/actions/setup-tools
       - name: Trivy config
-        run: trivy config --config infra/trivy.yaml infra
+        run: trivy config --config infra/trivy.yaml .
 
   plan:
     name: plan
