@@ -60,7 +60,7 @@ locals {
   }
 
   # Off until a forwarder is chosen. Turning this on publishes ImprovMX MX
-  # and SPF records and does not create the ImprovMX account. See README.
+  # and SPF records and does not create the ImprovMX account. See infra/README.md.
   enable_email_forwarding = false
 
   email_forwarding_records = {
