@@ -40,5 +40,6 @@ inputs = {
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",
     "sts.googleapis.com",
+    "dns.googleapis.com",
   ]
 }

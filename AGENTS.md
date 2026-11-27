@@ -24,7 +24,7 @@
 - **Cloud Providers**: GCP under `live/prod/gcp/`. The provider block is generated via `provider.hcl`.
 - **State Backend**: All units use the GCS backend (`matabar-prod-tfstate`) defined in `root.hcl`.
 - **Bootstrap Tier**: `projects/matabar-prod/project` and `bootstrap/tfstate` intentionally override `remote_state` to a **local** backend. Do NOT remove these overrides — they break the bootstrap ordering (the project and the state bucket must exist before GCS-backed state is usable).
-- **Apply Order**: GCP: project -> tfstate bucket -> github-wif. The first three are bootstrap-tier (local state). `github-wif` is excluded from CI `plan` and `apply`. Do not apply from a cloud agent; the owner applies locally.
+- **Apply Order**: GCP: project -> tfstate bucket -> github-wif -> dns/matabar-online. The first three are bootstrap-tier (local state). `github-wif` is excluded from CI `plan` and `apply`. DNS uses the GCS backend and does not depend on a VM. Do not apply from a cloud agent; the owner applies locally.
 - **Dependency mocks**: Every `dependency` block that feeds `inputs` must define `mock_outputs` for each referenced output and `mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]`. Mocks are never used on `apply`.
 - **Bootstrap outputs**: Never read `dependency.*.outputs` from a local-backend (bootstrap-tier) unit. Their state exists only on the owner's machine, so CI and `validate -backend=false` cannot read it. Take shared values (project id, state bucket) from `live/prod/env.hcl` and use a `dependencies` block for ordering.
 - **Live Layout**: Units live under `live/prod/gcp/europe-west3/` (`projects/matabar-prod/` and `bootstrap/`).

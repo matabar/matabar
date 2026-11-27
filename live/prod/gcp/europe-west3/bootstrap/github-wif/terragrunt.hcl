@@ -50,8 +50,12 @@ inputs = {
   github_repository = "matabar/personal-infra"
   github_owner      = "matabar"
 
-  # DNS roles are added with the DNS unit. This identity starts able to
-  # read the project and the state bucket only.
-  plan_project_roles  = ["roles/browser"]
-  apply_project_roles = ["roles/browser"]
+  plan_project_roles = [
+    "roles/browser",
+    "roles/dns.reader",
+  ]
+  apply_project_roles = [
+    "roles/browser",
+    "roles/dns.admin",
+  ]
 }

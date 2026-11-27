@@ -10,6 +10,8 @@ This repository creates the GCP project and the remote state bucket. It does not
 - `modules/`: Reusable OpenTofu modules, organized by cloud provider.
   - `modules/gcp/project`: GCP project and API enablement
   - `modules/gcp/storage-bucket`: Versioned GCS bucket (used for Terraform state)
+  - `modules/gcp/dns-zone`: Public Cloud DNS zone, DNSSEC, and record sets
+  - `modules/gcp/github-wif`: Workload Identity Federation for GitHub Actions
 - `live/`: Live infrastructure configurations.
   - `live/terragrunt.hcl`: Global Terragrunt settings
   - `live/prod/env.hcl`: Project id, billing account, and organization parent
@@ -17,6 +19,8 @@ This repository creates the GCP project and the remote state bucket. It does not
   - `live/prod/gcp/europe-west3/region.hcl`: Region setting consumed by units
   - `live/prod/gcp/europe-west3/bootstrap/tfstate/`: GCS state bucket (local backend)
   - `live/prod/gcp/europe-west3/projects/matabar-prod/project/`: GCP project (local backend, bootstrap tier)
+  - `live/prod/gcp/europe-west3/bootstrap/github-wif/`: GitHub Actions identity (local backend)
+  - `live/prod/gcp/europe-west3/projects/matabar-prod/dns/matabar-online/`: `matabar.online` zone
 
 ## State Backend
 
@@ -71,6 +75,21 @@ This lets you run `terragrunt validate` or `plan` on a stack before its dependen
 When adding a new `dependency.*.outputs.*` reference in `inputs`, add the matching key to that dependency's `mock_outputs`.
 
 Do not read outputs from the local-backend units (`project`, `bootstrap/*`). Their state lives only on the machine that applied them, so CI and `init -backend=false` cannot read it. Units take the project id and the state bucket from `live/prod/env.hcl` and list bootstrap units in a `dependencies` block for apply order only.
+## DNS
+
+`dns/matabar-online` publishes a public zone for `matabar.online` with DNSSEC
+(ECDSA P-256, NSEC3). Record sets are a map on the live unit. The zone starts
+with no records other than the NS and SOA that Cloud DNS creates itself.
+
+`enable_email_forwarding` is `false`. Set it to `true` to publish ImprovMX MX
+records (`10 mx1.improvmx.com.`, `20 mx2.improvmx.com.`) and SPF
+`v=spf1 include:spf.improvmx.com ~all`. That flag does not create an ImprovMX
+account; aliases are configured there. Namecheap email forwarding stops working
+once the domain's name servers leave Namecheap. Leave the flag off until a
+forwarder is chosen.
+
+The project unit enables `dns.googleapis.com`. The plan service account gets
+`roles/dns.reader` and the apply service account gets `roles/dns.admin`.
 
 ## GitHub Actions identity
 
