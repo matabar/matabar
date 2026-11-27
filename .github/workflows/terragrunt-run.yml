@@ -17,11 +17,6 @@ on:
         required: false
         type: boolean
         default: false
-      post_comment:
-        description: Update the pull request with the plan log
-        required: false
-        type: boolean
-        default: false
       workload_identity_provider:
         description: Full Workload Identity provider resource name
         required: true
@@ -47,7 +42,9 @@ jobs:
     permissions:
       contents: read
       id-token: write
-      pull-requests: write
+    env:
+      # The secrets context is not available in step conditions.
+      HAS_APP_KEY: ${{ secrets.GH_APP_PRIVATE_KEY != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -79,7 +76,7 @@ jobs:
 
       - name: Create GitHub App token
         id: app
-        if: ${{ secrets.GH_APP_PRIVATE_KEY != '' }}
+        if: env.HAS_APP_KEY == 'true'
         uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
         with:
           app-id: ${{ secrets.GH_APP_ID }}
@@ -125,43 +122,3 @@ jobs:
           name: terragrunt-plan
           path: .github/ci-out/plan.txt
           if-no-files-found: warn
-
-      - name: Comment on the pull request
-        if: ${{ inputs.post_comment && github.event_name == 'pull_request' && always() }}
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        with:
-          script: |
-            const fs = require('fs');
-            const marker = '<!-- terragrunt-plan -->';
-            let body = '';
-            try {
-              body = fs.readFileSync('.github/ci-out/plan.txt', 'utf8');
-            } catch (error) {
-              body = 'Plan log was not produced.';
-            }
-            const max = 60000;
-            if (body.length > max) {
-              body = body.slice(0, max) + '\n\n… truncated …';
-            }
-            const comment = `${marker}\n## Terragrunt ${{ inputs.mode }}\n\n\`\`\`\n${body}\n\`\`\``;
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-            const existing = comments.find((entry) => entry.user.type === 'Bot' && entry.body.includes(marker));
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existing.id,
-                body: comment,
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: comment,
-              });
-            }

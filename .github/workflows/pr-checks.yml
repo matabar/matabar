@@ -84,14 +84,70 @@ jobs:
     permissions:
       contents: read
       id-token: write
-      pull-requests: write
     uses: ./.github/workflows/terragrunt-run.yml
     with:
       mode: plan
       affected: true
       lock: false
-      post_comment: ${{ github.event_name == 'pull_request' }}
       workload_identity_provider: ${{ vars.WIF_PLAN_PROVIDER }}
       service_account: ${{ vars.WIF_PLAN_SERVICE_ACCOUNT }}
       github_pages_challenge: ${{ vars.GITHUB_PAGES_CHALLENGE }}
     secrets: inherit
+
+  # Only this job can write to the pull request. The plan job, which holds
+  # cloud credentials, cannot.
+  plan-comment:
+    name: plan-comment
+    needs: plan
+    if: always() && github.event_name == 'pull_request' && needs.plan.result != 'skipped'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Download plan
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        continue-on-error: true
+        with:
+          name: terragrunt-plan
+          path: plan-log
+
+      - name: Comment on the pull request
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- terragrunt-plan -->';
+            let body = '';
+            try {
+              body = fs.readFileSync('plan-log/plan.txt', 'utf8');
+            } catch (error) {
+              body = 'Plan log was not produced.';
+            }
+            const max = 60000;
+            if (body.length > max) {
+              body = body.slice(0, max) + '\n\n… truncated …';
+            }
+            const comment = `${marker}\n## Terragrunt plan\n\n\`\`\`\n${body}\n\`\`\``;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find((entry) => entry.user.type === 'Bot' && entry.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body: comment,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment,
+              });
+            }
