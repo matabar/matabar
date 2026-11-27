@@ -172,7 +172,8 @@ identity, so the plan is in the run before anyone approves. When it has
 changes, the `apply` job runs in the `production` environment, waits for the
 required reviewer, locks remote state, and applies the same units with
 `WIF_APPLY_PROVIDER` and `WIF_APPLY_SERVICE_ACCOUNT`. A plan with no changes
-skips the apply. The concurrency group `production-apply` does not cancel an
+skips the apply. A manual run from the Actions tab (`workflow_dispatch`) plans
+every unit. The concurrency group `production-apply` does not cancel an
 apply that is already running.
 
 ## Git Hooks

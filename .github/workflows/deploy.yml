@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+  # Full run of every CI-managed unit, e.g. after bootstrap or when a unit
+  # landed on main before this workflow existed. There is no diff base, so
+  # every unit is planned.
+  workflow_dispatch:
 
 permissions:
   contents: read
