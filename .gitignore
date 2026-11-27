@@ -1,6 +1,8 @@
 # Terraform / OpenTofu
 .terraform
 .terraform.*
+# Provider lock files are .terraform.lock.hcl and must be committed.
+!.terraform.lock.hcl
 *.tfstate
 *.tfstate.backup
 *.tfstate.lock.info
