@@ -5,7 +5,7 @@ Monorepo for the `matabar.online` stack: GCP foundation, DNS, GitHub configurati
 This repository (`matabar/matabar`) creates the GCP project, the remote state
 bucket, Cloud DNS for `matabar.online`, and the GitHub settings of this very
 repository (branch rules, the `production` environment, Pages). It also holds
-the static site in `site/`, which a workflow publishes to GitHub Pages. It does
+the static site in `apps/site/`, which a workflow publishes to GitHub Pages. It does
 not run a virtual machine. It replaces the former `matabar/personal-infra` and
 `matabar/matabar.online` repositories; the site no longer lives in its own
 repository.
@@ -16,30 +16,30 @@ former repositories, including the private archive, have been deleted.
 
 ## Directory Structure
 
-- `root.hcl`: Root configuration. Generates the remote state backend (GCS).
-- `modules/`: Reusable OpenTofu modules, organized by cloud provider.
-  - `modules/gcp/project`: GCP project and API enablement
-  - `modules/gcp/storage-bucket`: Versioned GCS bucket (used for Terraform state)
-  - `modules/gcp/dns-zone`: Public Cloud DNS zone, DNSSEC, and record sets
-  - `modules/gcp/github-wif`: Workload Identity Federation for GitHub Actions
-  - `modules/github/repos`: This repository: Pages, vulnerability alerts, branch rules, and the production environment
-- `site/`: The static site served at `matabar.online`.
-- `.github/workflows/`: `pr-checks` (fmt, validate, tflint, trivy, plan), `deploy` (plan and gated apply on `main`), `drift` (daily plan), `terragrunt-run` (shared plan/apply), and `pages` (publishes `site/` to GitHub Pages on changes to `site/**`).
-- `live/`: Live infrastructure configurations.
-  - `live/terragrunt.hcl`: Global Terragrunt settings
-  - `live/prod/env.hcl`: Project id, billing account, and organization parent
-  - `live/prod/gcp/provider.hcl`: Generated Google provider block
-  - `live/prod/gcp/europe-west3/region.hcl`: Region setting consumed by units
-  - `live/prod/gcp/europe-west3/bootstrap/tfstate/`: GCS state bucket (local backend)
-  - `live/prod/gcp/europe-west3/projects/matabar-prod/project/`: GCP project (local backend, bootstrap tier)
-  - `live/prod/gcp/europe-west3/bootstrap/github-wif/`: GitHub Actions identity (local backend)
-  - `live/prod/gcp/europe-west3/projects/matabar-prod/dns/matabar-online/`: `matabar.online` zone
-  - `live/prod/github/repos/`: this repository's settings, Pages, branch rules, production environment
+- `infra/root.hcl`: Root configuration. Generates the remote state backend (GCS).
+- `infra/modules/`: Reusable OpenTofu modules, organized by cloud provider.
+  - `infra/modules/gcp/project`: GCP project and API enablement
+  - `infra/modules/gcp/storage-bucket`: Versioned GCS bucket (used for Terraform state)
+  - `infra/modules/gcp/dns-zone`: Public Cloud DNS zone, DNSSEC, and record sets
+  - `infra/modules/gcp/github-wif`: Workload Identity Federation for GitHub Actions
+  - `infra/modules/github/repos`: This repository: Pages, vulnerability alerts, branch rules, and the production environment
+- `apps/site/`: The static site served at `matabar.online`.
+- `.github/workflows/`: `pr-checks` (fmt, validate, tflint, trivy, plan), `deploy` (plan and gated apply on `main`), `drift` (daily plan), `terragrunt-run` (shared plan/apply), and `pages` (publishes `apps/site/` to GitHub Pages on changes to `apps/site/**`).
+- `infra/live/`: Live infrastructure configurations.
+  - `infra/live/terragrunt.hcl`: Global Terragrunt settings
+  - `infra/live/prod/env.hcl`: Project id, billing account, and organization parent
+  - `infra/live/prod/gcp/provider.hcl`: Generated Google provider block
+  - `infra/live/prod/gcp/europe-west3/region.hcl`: Region setting consumed by units
+  - `infra/live/prod/gcp/europe-west3/bootstrap/tfstate/`: GCS state bucket (local backend)
+  - `infra/live/prod/gcp/europe-west3/projects/matabar-prod/project/`: GCP project (local backend, bootstrap tier)
+  - `infra/live/prod/gcp/europe-west3/bootstrap/github-wif/`: GitHub Actions identity (local backend)
+  - `infra/live/prod/gcp/europe-west3/projects/matabar-prod/dns/matabar-online/`: `matabar.online` zone
+  - `infra/live/prod/github/repos/`: this repository's settings, Pages, branch rules, production environment
 
 ## State Backend
 
-All units store state in the GCS bucket named by `state_bucket` in `live/prod/env.hcl`
-(`matabar-prod-tfstate`). `root.hcl` reads that value. The bucket blocks public
+All units store state in the GCS bucket named by `state_bucket` in `infra/live/prod/env.hcl`
+(`matabar-prod-tfstate`). `infra/root.hcl` reads that value. The bucket blocks public
 access, uses uniform bucket-level access, and keeps object versions.
 Two bootstrap-tier units keep their state **local** to avoid a chicken-and-egg
 dependency on the bucket:
@@ -49,7 +49,7 @@ dependency on the bucket:
 
 ## Project identity
 
-`live/prod/env.hcl` is the only place that sets the project id and the billing
+`infra/live/prod/env.hcl` is the only place that sets the project id and the billing
 account. The project module takes `billing_account` as a required input and
 does not embed an account id.
 
@@ -86,7 +86,7 @@ already have a different GCP project, run
 `gcloud auth application-default set-quota-project EXISTING_PROJECT_ID` and
 apply again.
 
-`org_id` and `folder_id` in `live/prod/env.hcl` are null, so the project is
+`org_id` and `folder_id` in `infra/live/prod/env.hcl` are null, so the project is
 created with no organization parent. That matches a personal Google account.
 If the account is inside Cloud Identity or Workspace and the organization
 forbids parentless projects, set exactly one of `org_id` or `folder_id`.
@@ -99,16 +99,18 @@ is not required. If Google says `matabar-online-prod` is taken, change
 From the repo root, with user credentials (not Workload Identity):
 
 ```bash
-terragrunt --working-dir live/prod/gcp/europe-west3/projects/matabar-prod/project apply
-terragrunt --working-dir live/prod/gcp/europe-west3/bootstrap/tfstate apply
-terragrunt --working-dir live/prod/gcp/europe-west3/bootstrap/github-wif apply
+terragrunt --working-dir infra/live/prod/gcp/europe-west3/projects/matabar-prod/project apply
+terragrunt --working-dir infra/live/prod/gcp/europe-west3/bootstrap/tfstate apply
+terragrunt --working-dir infra/live/prod/gcp/europe-west3/bootstrap/github-wif apply
 ```
 
 The first three units keep **local** state. Back up these gitignored files:
 
-- `live/prod/gcp/europe-west3/projects/matabar-prod/project/terraform.tfstate`
-- `live/prod/gcp/europe-west3/bootstrap/tfstate/terraform.tfstate`
-- `live/prod/gcp/europe-west3/bootstrap/github-wif/terraform.tfstate`
+- `infra/live/prod/gcp/europe-west3/projects/matabar-prod/project/terraform.tfstate`
+- `infra/live/prod/gcp/europe-west3/bootstrap/tfstate/terraform.tfstate`
+- `infra/live/prod/gcp/europe-west3/bootstrap/github-wif/terraform.tfstate`
+
+If these files predate the `infra/` layout, move them by hand from the old `live/...` unit directories to the matching `infra/live/...` directories. Git does not move untracked files.
 
 Seed the remote state of the two CI-managed units once, with the same user
 credentials. On the first `init` the GCS backend writes a lock to create the
@@ -116,8 +118,8 @@ empty `default.tfstate`, and the read-only plan identity cannot write, so the
 first Deploy plan fails with `storage.objects.create` denied until this runs:
 
 ```bash
-terragrunt --working-dir live/prod/gcp/europe-west3/projects/matabar-prod/dns/matabar-online init
-terragrunt --working-dir live/prod/github/repos init
+terragrunt --working-dir infra/live/prod/gcp/europe-west3/projects/matabar-prod/dns/matabar-online init
+terragrunt --working-dir infra/live/prod/github/repos init
 ```
 
 Copy the `github-wif` outputs into repository variables on `matabar/matabar`:
@@ -143,7 +145,7 @@ To apply the GitHub unit locally instead, export the token for that shell only:
 
 ```bash
 export GITHUB_TOKEN=...   # not a TF_VAR; it is not written to state
-terragrunt --working-dir live/prod/github/repos apply
+terragrunt --working-dir infra/live/prod/github/repos apply
 ```
 
 The run workflow still accepts GitHub App secrets (`GH_APP_ID`,
@@ -159,8 +161,8 @@ certificate exists.
 Then publish the zone:
 
 ```bash
-terragrunt --working-dir live/prod/gcp/europe-west3/projects/matabar-prod/dns/matabar-online apply
-terragrunt --working-dir live/prod/gcp/europe-west3/projects/matabar-prod/dns/matabar-online output name_servers
+terragrunt --working-dir infra/live/prod/gcp/europe-west3/projects/matabar-prod/dns/matabar-online apply
+terragrunt --working-dir infra/live/prod/gcp/europe-west3/projects/matabar-prod/dns/matabar-online output name_servers
 ```
 
 In Namecheap, open the domain, set Nameservers to **Custom DNS**, and enter
@@ -182,7 +184,7 @@ dig SOA matabar.online @1.1.1.1
 The NS answers should be the Google name servers. Then:
 
 ```bash
-terragrunt --working-dir live/prod/gcp/europe-west3/projects/matabar-prod/dns/matabar-online output dnssec_ds_records
+terragrunt --working-dir infra/live/prod/gcp/europe-west3/projects/matabar-prod/dns/matabar-online output dnssec_ds_records
 ```
 
 At Namecheap, add one DS record using the `sha256` digest: key tag, algorithm
@@ -198,10 +200,10 @@ record, then apply the zone (or re-run Deploy):
 ```bash
 gh variable set PAGES_CHALLENGE --repo matabar/matabar --body 'the-value-from-github'
 export PAGES_CHALLENGE='the-value-from-github'
-terragrunt --working-dir live/prod/gcp/europe-west3/projects/matabar-prod/dns/matabar-online apply
+terragrunt --working-dir infra/live/prod/gcp/europe-west3/projects/matabar-prod/dns/matabar-online apply
 ```
 
-`pages_https_enforced` is `true` in `live/prod/github/repos/terragrunt.hcl`. The
+`pages_https_enforced` is `true` in `infra/live/prod/github/repos/terragrunt.hcl`. The
 first apply of a fresh setup cannot enforce HTTPS because GitHub rejects it
 until the certificate exists, so set it to `false` there, and switch it to
 `true` once GitHub reports the Pages certificate as issued.
@@ -232,10 +234,10 @@ This lets you run `terragrunt validate` or `plan` on a stack before its dependen
 
 When adding a new `dependency.*.outputs.*` reference in `inputs`, add the matching key to that dependency's `mock_outputs`.
 
-Do not read outputs from the local-backend units (`project`, `bootstrap/*`). Their state lives only on the machine that applied them, so CI and `init -backend=false` cannot read it. Units take the project id and the state bucket from `live/prod/env.hcl` and list bootstrap units in a `dependencies` block for apply order only.
+Do not read outputs from the local-backend units (`project`, `bootstrap/*`). Their state lives only on the machine that applied them, so CI and `init -backend=false` cannot read it. Units take the project id and the state bucket from `infra/live/prod/env.hcl` and list bootstrap units in a `dependencies` block for apply order only.
 ## GitHub repositories
 
-`live/prod/github/repos` uses the `integrations/github` provider. The token is
+`infra/live/prod/github/repos` uses the `integrations/github` provider. The token is
 the `GITHUB_TOKEN` environment variable. Use a fine-grained PAT owned by
 `matabar`: a GitHub App installation token cannot create a repository under a
 personal account, so it can manage `matabar.online` only after it exists. The

@@ -7,26 +7,26 @@ updates:
     open-pull-requests-limit: 5
 
   - package-ecosystem: terraform
-    directory: /modules/gcp/project
+    directory: /infra/modules/gcp/project
     schedule:
       interval: weekly
 
   - package-ecosystem: terraform
-    directory: /modules/gcp/storage-bucket
+    directory: /infra/modules/gcp/storage-bucket
     schedule:
       interval: weekly
 
   - package-ecosystem: terraform
-    directory: /modules/gcp/dns-zone
+    directory: /infra/modules/gcp/dns-zone
     schedule:
       interval: weekly
 
   - package-ecosystem: terraform
-    directory: /modules/gcp/github-wif
+    directory: /infra/modules/gcp/github-wif
     schedule:
       interval: weekly
 
   - package-ecosystem: terraform
-    directory: /modules/github/repos
+    directory: /infra/modules/github/repos
     schedule:
       interval: weekly

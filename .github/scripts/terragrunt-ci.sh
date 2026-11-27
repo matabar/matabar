@@ -6,6 +6,8 @@ set -euo pipefail
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 
+# Terragrunt runs from infra/, where root.hcl and live/ are. Filters are
+# relative to infra/.
 mode="${MODE:?}"
 affected="${AFFECTED:-true}"
 lock="${LOCK:-false}"
@@ -37,7 +39,7 @@ if [ "$affected" = "true" ]; then
       break
     fi
     filters+=(--filter "$line")
-  done < <(.github/scripts/affected-filters.sh "$base")
+  done < <("$repo_root/.github/scripts/affected-filters.sh" "$base")
 fi
 
 if [ "$skip_github" = "true" ]; then
@@ -59,8 +61,11 @@ run_tg() {
   local command="$1"
   shift
   set +e
-  terragrunt run --all --non-interactive "${filters[@]}" -- \
-    "$command" -input=false -no-color "${lock_args[@]}" "$@" 2>&1 | tee -a "$log"
+  (
+    cd "$repo_root/infra"
+    terragrunt run --all --non-interactive "${filters[@]}" -- \
+      "$command" -input=false -no-color "${lock_args[@]}" "$@"
+  ) 2>&1 | tee -a "$log"
   local code="${PIPESTATUS[0]}"
   set -e
   if [ "$code" -eq 0 ] || { [ "$command" = "plan" ] && [ "$code" -eq 2 ]; }; then

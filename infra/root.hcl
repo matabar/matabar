@@ -1,5 +1,5 @@
 locals {
-  env_config   = read_terragrunt_config("${get_repo_root()}/live/prod/env.hcl")
+  env_config   = read_terragrunt_config("${get_repo_root()}/infra/live/prod/env.hcl")
   state_bucket = local.env_config.locals.state_bucket
 }
 

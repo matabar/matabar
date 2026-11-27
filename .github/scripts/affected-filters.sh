@@ -14,24 +14,25 @@ if ! git rev-parse --verify --quiet "${base}^{commit}" >/dev/null; then
 fi
 
 files="$(git diff --name-only "${base}...HEAD")"
-shared='^(root\.hcl|live/terragrunt\.hcl|live/prod/env\.hcl|live/prod/gcp/provider\.hcl|live/prod/gcp/europe-west3/region\.hcl)$'
+shared='^infra/(root\.hcl|live/terragrunt\.hcl|live/prod/env\.hcl|live/prod/gcp/provider\.hcl|live/prod/gcp/europe-west3/region\.hcl)$'
 if printf '%s\n' "$files" | grep -Eq "$shared"; then
   echo ALL
   exit 0
 fi
 
-# Changed units and everything that depends on them, as plain path filters.
+# Changed units and everything that depends on them, as plain path filters
+# relative to infra/, where Terragrunt runs.
 # A git-range filter ([base...HEAD]) makes Terragrunt evaluate the unit in a
 # separate worktree as well, so one unit could plan or apply twice in
 # parallel and race for the state lock.
 {
   # Units whose own directory changed (terragrunt.hcl or files beside it).
   printf '%s\n' "$files" | while IFS= read -r file; do
-    case "$file" in live/*) ;; *) continue ;; esac
+    case "$file" in infra/live/*) ;; *) continue ;; esac
     dir="$(dirname "$file")"
-    while [ "$dir" != "." ] && [ "$dir" != "live" ]; do
+    while [ "$dir" != "." ] && [ "$dir" != "infra/live" ]; do
       if [ -f "$repo_root/$dir/terragrunt.hcl" ]; then
-        echo "...$(printf './%s' "$dir")"
+        echo "...$(printf './%s' "${dir#infra/}")"
         break
       fi
       dir="$(dirname "$dir")"
@@ -39,13 +40,13 @@ fi
   done
 
   # Units that source a changed module.
-  mods="$(printf '%s\n' "$files" | grep -oE '^modules/[^/]+/[^/]+/' | sed 's#/$##' | sort -u || true)"
+  mods="$(printf '%s\n' "$files" | grep -oE '^infra/modules/[^/]+/[^/]+/' | sed 's#/$##' | sort -u || true)"
   while IFS= read -r mod; do
     [ -n "$mod" ] || continue
     while IFS= read -r unit; do
       [ -n "$unit" ] || continue
       dir="$(dirname "$unit")"
-      echo "...${dir/#"${repo_root}"/.}"
-    done < <(grep -l -F -- "$mod" $(find "$repo_root/live" -name terragrunt.hcl -print) || true)
+      echo "...${dir/#"${repo_root}/infra"/.}"
+    done < <(grep -l -F -- "$mod" $(find "$repo_root/infra/live" -name terragrunt.hcl -print) || true)
   done <<< "$mods"
 } | sort -u

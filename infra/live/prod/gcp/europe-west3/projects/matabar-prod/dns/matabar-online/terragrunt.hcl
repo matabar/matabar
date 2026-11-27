@@ -3,11 +3,11 @@ include "root" {
 }
 
 include "provider" {
-  path = "${get_repo_root()}/live/prod/gcp/provider.hcl"
+  path = "${get_repo_root()}/infra/live/prod/gcp/provider.hcl"
 }
 
 terraform {
-  source = "${get_repo_root()}/modules/gcp/dns-zone"
+  source = "${get_repo_root()}/infra/modules/gcp/dns-zone"
 }
 
 locals {

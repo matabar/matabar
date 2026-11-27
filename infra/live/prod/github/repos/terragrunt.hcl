@@ -19,7 +19,7 @@ generate "github_provider" {
 }
 
 terraform {
-  source = "${get_repo_root()}/modules/github/repos"
+  source = "${get_repo_root()}/infra/modules/github/repos"
 }
 
 # Ordering only. Bootstrap units keep local state, so their outputs are not

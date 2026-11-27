@@ -21,14 +21,15 @@
     - Plan documentation updates as first-class citizens in every task.
 
 ## Infrastructure Conventions
-- **Cloud Providers**: GCP under `live/prod/gcp/`. The provider block is generated via `provider.hcl`.
-- **State Backend**: All units use the GCS backend (`matabar-prod-tfstate`) defined in `root.hcl`.
+- **Cloud Providers**: GCP under `infra/live/prod/gcp/`. The provider block is generated via `provider.hcl`.
+- **State Backend**: All units use the GCS backend (`matabar-prod-tfstate`) defined in `infra/root.hcl`.
 - **Bootstrap Tier**: `projects/matabar-prod/project`, `bootstrap/tfstate`, and `bootstrap/github-wif` intentionally override `remote_state` to a **local** backend. Do NOT remove these overrides. The project and the state bucket must exist before GCS-backed state is usable, and CI must not rewrite its own Workload Identity trust.
 - **Apply Order**: project -> tfstate bucket -> github-wif -> dns/matabar-online and github/repos. The first three are bootstrap-tier (local state). `github-wif` is excluded from CI `plan` and `apply`. DNS and GitHub use the GCS backend and are applied by the Deploy workflow after merge. The owner applies the bootstrap tier locally; never from a cloud agent.
 - **Dependency mocks**: Every `dependency` block that feeds `inputs` must define `mock_outputs` for each referenced output and `mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]`. Mocks are never used on `apply`.
-- **Bootstrap outputs**: Never read `dependency.*.outputs` from a local-backend (bootstrap-tier) unit. Their state exists only on the owner's machine, so CI and `validate -backend=false` cannot read it. Take shared values (project id, state bucket) from `live/prod/env.hcl` and use a `dependencies` block for ordering.
-- **Monorepo**: `matabar/matabar` holds infrastructure (`live/`, `modules/`) and the static site (`site/`, published by the Pages workflow on `site/**`). The former `personal-infra` and `matabar.online` repositories are retired; do not recreate them. Their resources were forgotten from the GitHub unit's state (`removed` blocks, since dropped); never reuse those addresses.
-- **Live Layout**: Units live under `live/prod/gcp/europe-west3/` (`projects/matabar-prod/` and `bootstrap/`).
+- **Bootstrap outputs**: Never read `dependency.*.outputs` from a local-backend (bootstrap-tier) unit. Their state exists only on the owner's machine, so CI and `validate -backend=false` cannot read it. Take shared values (project id, state bucket) from `infra/live/prod/env.hcl` and use a `dependencies` block for ordering.
+- **Monorepo**: `matabar/matabar` holds infrastructure (`infra/`) and the static site (`apps/site/`, published by the Pages workflow on `apps/site/**`). The former `personal-infra` and `matabar.online` repositories are retired; do not recreate them. Their resources were forgotten from the GitHub unit's state (`removed` blocks, since dropped); never reuse those addresses.
+- **Repository Layout**: The root holds only repo-wide files (`.github/`, `.githooks/`, `AGENTS.md`, `README.md`, `CODEOWNERS`, `.tool-versions`, `.gitignore`, `.env.example`). Deployables live under `apps/<name>` (today `apps/site`). Infrastructure lives under `infra/` (`root.hcl`, `live/`, `modules/`, `.tflint.hcl`, `trivy.yaml`). Shared code goes under `packages/<name>`, created when the first one exists. A new project adds a directory; nothing existing moves. Terragrunt runs from `infra/`, and `get_repo_root()` paths carry the `infra/` prefix.
+- **Live Layout**: Units live under `infra/live/prod/gcp/europe-west3/` (`projects/matabar-prod/` and `bootstrap/`).
 - **Secrets**: Never commit `*.tfstate`, `*.tfvars`, `.env`, PEM files, or credential JSON. There is no VM and no SSH key in this repo.
 - **Public repository**: `matabar/matabar` is public. Never commit personal data either: email addresses, home or office IPs, or anything identifying beyond the GitHub login. Commit with the GitHub noreply address.
 
