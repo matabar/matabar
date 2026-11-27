@@ -368,7 +368,7 @@ review from `@matabar`.
 ## Git Hooks
 
 Enable local hooks (blocks direct commits to `main`, auto-formats and re-stages
-HCL/TF, validates on push):
+HCL/TF, checks commit subjects against the scopes in `AGENTS.md`, validates on push):
 
 ```bash
 git config core.hooksPath .githooks
