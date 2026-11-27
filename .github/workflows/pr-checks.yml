@@ -1,0 +1,97 @@
+name: PR checks
+
+on:
+  pull_request:
+  push:
+    branches-ignore:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fmt:
+    name: fmt
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup tools
+        uses: ./.github/actions/setup-tools
+      - name: OpenTofu fmt
+        run: tofu fmt -check -recursive
+      - name: Terragrunt hcl format
+        run: terragrunt hcl format --check
+
+  validate:
+    name: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup tools
+        uses: ./.github/actions/setup-tools
+      - name: Init and validate
+        run: |
+          set -euo pipefail
+          terragrunt run --all --non-interactive -- init -backend=false -input=false -lockfile=readonly
+          terragrunt run --all --non-interactive -- validate -no-color
+
+  tflint:
+    name: tflint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup tools
+        uses: ./.github/actions/setup-tools
+      - name: TFLint
+        run: |
+          tflint --init
+          tflint --recursive --config "${GITHUB_WORKSPACE}/.tflint.hcl"
+
+  trivy:
+    name: trivy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup tools
+        uses: ./.github/actions/setup-tools
+      - name: Trivy config
+        run: trivy config --config trivy.yaml .
+
+  plan:
+    name: plan
+    needs: [fmt, validate, tflint, trivy]
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    uses: ./.github/workflows/terragrunt-run.yml
+    with:
+      mode: plan
+      affected: true
+      lock: false
+      post_comment: ${{ github.event_name == 'pull_request' }}
+      workload_identity_provider: ${{ vars.WIF_PLAN_PROVIDER }}
+      service_account: ${{ vars.WIF_PLAN_SERVICE_ACCOUNT }}
+      github_pages_challenge: ${{ vars.GITHUB_PAGES_CHALLENGE }}
+    secrets: inherit

@@ -10,6 +10,10 @@ include "provider" {
 # unit keeps its state local rather than in the (not-yet-existing) bucket.
 # Apply it on a machine with user Application Default Credentials. CI does not
 # apply this unit.
+exclude {
+  if      = get_env("CI", "false") == "true"
+  actions = ["plan", "apply"]
+}
 remote_state {
   backend = "local"
   config = {

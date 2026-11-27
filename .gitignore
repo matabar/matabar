@@ -20,6 +20,7 @@ terraform.rc
 # Terragrunt
 .terragrunt-cache/
 terragrunt-debug.tfvars
+.github/ci-out/
 
 # Local secrets (project root only — never commit)
 .env
@@ -27,6 +28,7 @@ terragrunt-debug.tfvars
 
 # Logs
 *.log
+.tflint.d/
 
 # OS files
 .DS_Store

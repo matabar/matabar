@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# Run an affected or full Terragrunt plan/apply. Exits 0 when OpenTofu
+# reports no changes or a successful plan with changes (exit 2).
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+mode="${MODE:?}"
+affected="${AFFECTED:-true}"
+lock="${LOCK:-false}"
+skip_github="${SKIP_GITHUB:-false}"
+
+if [ "${GITHUB_EVENT_NAME:-}" = "pull_request" ]; then
+  base="${PR_BASE_SHA:?}"
+else
+  base="${BASE_REVISION:-origin/main}"
+fi
+
+filters=()
+if [ "$affected" = "true" ]; then
+  while IFS= read -r line; do
+    if [ "$line" = "ALL" ]; then
+      filters=()
+      break
+    fi
+    filters+=(--filter "$line")
+  done < <(.github/scripts/affected-filters.sh "$base")
+fi
+
+if [ "$skip_github" = "true" ]; then
+  filters+=(--filter '!./live/prod/github/**')
+fi
+
+lock_args=()
+if [ "$lock" != "true" ]; then
+  lock_args+=(-lock=false)
+fi
+
+mkdir -p .github/ci-out
+log=.github/ci-out/plan.txt
+: > "$log"
+
+echo "Terragrunt filters: ${filters[*]:-<all units>}" | tee -a "$log"
+
+run_tg() {
+  local command="$1"
+  shift
+  set +e
+  terragrunt run --all --non-interactive "${filters[@]}" -- \
+    "$command" -input=false -no-color "${lock_args[@]}" "$@" 2>&1 | tee -a "$log"
+  local code="${PIPESTATUS[0]}"
+  set -e
+  if [ "$code" -eq 0 ] || { [ "$command" = "plan" ] && [ "$code" -eq 2 ]; }; then
+    return 0
+  fi
+  echo "terragrunt ${command} failed with exit ${code}" | tee -a "$log"
+  return "$code"
+}
+
+case "$mode" in
+  plan)
+    run_tg plan -detailed-exitcode
+    ;;
+  apply)
+    run_tg apply
+    ;;
+  plan-apply)
+    run_tg plan -detailed-exitcode
+    run_tg apply
+    ;;
+  *)
+    echo "Unknown mode: ${mode}" >&2
+    exit 1
+    ;;
+esac
+
+if grep -Eq 'Plan: ([1-9][0-9]* to add|[0-9]+ to add, [1-9]|[0-9]+ to add, [0-9]+ to change, [1-9])' "$log"; then
+  echo "changes=true" >> "${GITHUB_OUTPUT:-/dev/null}"
+else
+  echo "changes=false" >> "${GITHUB_OUTPUT:-/dev/null}"
+fi

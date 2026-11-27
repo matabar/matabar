@@ -1,0 +1,167 @@
+name: Terragrunt run
+
+on:
+  workflow_call:
+    inputs:
+      mode:
+        description: plan, apply, or plan-apply
+        required: true
+        type: string
+      affected:
+        description: Limit the run to changed units and their dependents
+        required: false
+        type: boolean
+        default: true
+      lock:
+        description: Allow OpenTofu to lock remote state
+        required: false
+        type: boolean
+        default: false
+      post_comment:
+        description: Update the pull request with the plan log
+        required: false
+        type: boolean
+        default: false
+      workload_identity_provider:
+        description: Full Workload Identity provider resource name
+        required: true
+        type: string
+      service_account:
+        description: Service account email to impersonate
+        required: true
+        type: string
+      github_pages_challenge:
+        description: Optional Pages domain verification value
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    name: terragrunt
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Fetch main
+        run: git fetch origin main
+
+      - name: Require Workload Identity settings
+        env:
+          PROVIDER: ${{ inputs.workload_identity_provider }}
+          SERVICE_ACCOUNT: ${{ inputs.service_account }}
+        run: |
+          set -euo pipefail
+          if [ -z "$PROVIDER" ] || [ -z "$SERVICE_ACCOUNT" ]; then
+            echo "Set the WIF_PLAN_* or WIF_APPLY_* repository variables from the github-wif outputs."
+            exit 1
+          fi
+
+      - name: Setup tools
+        uses: ./.github/actions/setup-tools
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ inputs.workload_identity_provider }}
+          service_account: ${{ inputs.service_account }}
+
+      - name: Create GitHub App token
+        id: app
+        if: ${{ secrets.GH_APP_PRIVATE_KEY != '' }}
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Choose GitHub token
+        id: gh-token
+        env:
+          APP_TOKEN: ${{ steps.app.outputs.token }}
+          ADMIN_TOKEN: ${{ secrets.GH_ADMIN_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -n "${APP_TOKEN}" ]; then
+            echo "::add-mask::${APP_TOKEN}"
+            echo "present=true" >> "$GITHUB_OUTPUT"
+            echo "token=${APP_TOKEN}" >> "$GITHUB_OUTPUT"
+          elif [ -n "${ADMIN_TOKEN}" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+            echo "token=${ADMIN_TOKEN}" >> "$GITHUB_OUTPUT"
+          else
+            echo "No GitHub App key or GH_ADMIN_TOKEN. The GitHub unit will be left out of this run."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Terragrunt
+        id: tg
+        env:
+          MODE: ${{ inputs.mode }}
+          AFFECTED: ${{ inputs.affected }}
+          LOCK: ${{ inputs.lock }}
+          SKIP_GITHUB: ${{ steps.gh-token.outputs.present != 'true' }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_REVISION: origin/main
+          GITHUB_TOKEN: ${{ steps.gh-token.outputs.token }}
+          GITHUB_PAGES_CHALLENGE: ${{ inputs.github_pages_challenge }}
+        run: bash .github/scripts/terragrunt-ci.sh
+
+      - name: Upload plan log
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: terragrunt-plan
+          path: .github/ci-out/plan.txt
+          if-no-files-found: warn
+
+      - name: Comment on the pull request
+        if: ${{ inputs.post_comment && github.event_name == 'pull_request' && always() }}
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- terragrunt-plan -->';
+            let body = '';
+            try {
+              body = fs.readFileSync('.github/ci-out/plan.txt', 'utf8');
+            } catch (error) {
+              body = 'Plan log was not produced.';
+            }
+            const max = 60000;
+            if (body.length > max) {
+              body = body.slice(0, max) + '\n\n… truncated …';
+            }
+            const comment = `${marker}\n## Terragrunt ${{ inputs.mode }}\n\n\`\`\`\n${body}\n\`\`\``;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find((entry) => entry.user.type === 'Bot' && entry.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body: comment,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment,
+              });
+            }

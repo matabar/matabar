@@ -1,0 +1,9 @@
+scan:
+  skip-dirs:
+    - "**/.terragrunt-cache"
+    - "**/.terraform"
+    - .github/ci-out
+exit-code: 1
+severity:
+  - HIGH
+  - CRITICAL

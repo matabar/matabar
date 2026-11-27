@@ -25,8 +25,8 @@ while IFS= read -r file; do
     case "$formatted_dirs" in
       *" $dir "*) : ;;
       *)
-        terragrunt hclfmt --working-dir "$dir" >/dev/null 2>&1 \
-          || terragrunt hclfmt "$dir" >/dev/null 2>&1 || true
+        terragrunt hcl format --working-dir "$dir" >/dev/null 2>&1 \
+          || terragrunt hclfmt --working-dir "$dir" >/dev/null 2>&1 || true
         formatted_dirs="$formatted_dirs$dir "
         ;;
     esac

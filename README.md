@@ -109,6 +109,10 @@ repository permissions Administration (read and write), Environments (read and
 write), Pages (read and write), Contents (read and write, needed for
 `auto_init`), and Metadata (read). Administration write on all repositories is
 what lets the token create `matabar.online`.
+App or token permissions: Administration (read and write), Environments
+(read and write), Pages (read and write), Contents (read), Metadata (read),
+Vulnerability alerts (read and write), and Repository creation (read and write).
+A classic PAT needs the `repo` scope.
 
 ## DNS
 
@@ -149,6 +153,20 @@ After apply, copy the outputs into GitHub repository variables
 
 Back up `bootstrap/github-wif/terraform.tfstate`. It is gitignored. Losing it
 means importing the pool and service accounts.
+
+## Pull request checks
+
+Every pull request, and every push that is not to `main`, runs `fmt`,
+`validate`, `tflint`, `trivy`, and `plan`. Validate uses `-backend=false` and
+the committed provider lock. `plan` uses Workload Identity and does not lock
+state. It plans only units changed since the pull request base (or `main` on a
+branch push), plus units that depend on them, and posts the log on the pull
+request. The project, state bucket, and GitHub identity units exclude
+themselves from CI plan and apply.
+
+Tool versions are pinned in `.tool-versions`. The `plan` check stays red until
+the `WIF_PLAN_PROVIDER` and `WIF_PLAN_SERVICE_ACCOUNT` repository variables
+exist.
 
 ## Git Hooks
 

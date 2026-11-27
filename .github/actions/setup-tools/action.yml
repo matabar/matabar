@@ -1,0 +1,46 @@
+name: Setup OpenTofu tools
+description: Install the OpenTofu, Terragrunt, TFLint, and Trivy versions pinned in .tool-versions.
+
+runs:
+  using: composite
+  steps:
+    - name: Check .tool-versions
+      shell: bash
+      run: |
+        set -euo pipefail
+        want() { awk -v key="$1" '$1 == key { print $2 }' .tool-versions; }
+        test "$(want opentofu)" = "1.13.10"
+        test "$(want terragrunt)" = "1.2.3"
+        test "$(want tflint)" = "0.66.0"
+        test "$(want trivy)" = "0.76.2"
+
+    - name: Install OpenTofu
+      uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
+      with:
+        tofu_version: 1.13.10
+
+    - name: Install Terragrunt, TFLint, and Trivy
+      shell: bash
+      run: |
+        set -euo pipefail
+        verify() {
+          echo "$2  $1" | sha256sum -c -
+        }
+        tmp=$(mktemp -d)
+        curl -fsSL -o "$tmp/terragrunt" \
+          https://github.com/gruntwork-io/terragrunt/releases/download/v1.2.3/terragrunt_linux_amd64
+        verify "$tmp/terragrunt" f55f5943f7a5976b1a3675bbbe540cf81bbba3e415c18e980203f0fd664dae6b
+        install -m 0755 "$tmp/terragrunt" /usr/local/bin/terragrunt
+
+        curl -fsSL -o "$tmp/tflint.zip" \
+          https://github.com/terraform-linters/tflint/releases/download/v0.66.0/tflint_linux_amd64.zip
+        verify "$tmp/tflint.zip" 22be11cadc25cd02401e94c0ccc91aa63467debb8485c2a755d98f4c0a9d1e2e
+        unzip -p "$tmp/tflint.zip" tflint > "$tmp/tflint"
+        install -m 0755 "$tmp/tflint" /usr/local/bin/tflint
+
+        curl -fsSL -o "$tmp/trivy.tar.gz" \
+          https://github.com/aquasecurity/trivy/releases/download/v0.76.2/trivy_0.76.2_Linux-64bit.tar.gz
+        verify "$tmp/trivy.tar.gz" bc0fc726e017b8927a62b2d3531d7a84ee01769daf5c99ed866dced54089fdbf
+        tar -xzf "$tmp/trivy.tar.gz" -C "$tmp" trivy
+        install -m 0755 "$tmp/trivy" /usr/local/bin/trivy
+        rm -rf "$tmp"

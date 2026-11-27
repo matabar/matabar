@@ -9,6 +9,10 @@ include "provider" {
 # Bootstrap-tier: this unit creates the bucket that backs remote state, so it
 # keeps its own state local. Apply it with user credentials after the project
 # unit. CI does not apply this unit.
+exclude {
+  if      = get_env("CI", "false") == "true"
+  actions = ["plan", "apply"]
+}
 remote_state {
   backend = "local"
   config = {
