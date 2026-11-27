@@ -39,7 +39,7 @@ if [ "$affected" = "true" ]; then
       break
     fi
     filters+=(--filter "$line")
-  done < <("$repo_root/.github/scripts/affected-filters.sh "$base")
+  done < <("$repo_root/.github/scripts/affected-filters.sh" "$base")
 fi
 
 if [ "$skip_github" = "true" ]; then
