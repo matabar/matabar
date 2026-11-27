@@ -59,6 +59,10 @@ jobs:
       - name: Setup tools
         uses: ./.github/actions/setup-tools
       - name: TFLint
+        env:
+          # tflint --init downloads the google ruleset from the GitHub API.
+          # Unauthenticated calls share a per-IP limit on hosted runners.
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           tflint --init
           tflint --recursive --config "${GITHUB_WORKSPACE}/.tflint.hcl"
