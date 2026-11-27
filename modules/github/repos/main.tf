@@ -15,10 +15,9 @@ resource "github_repository" "infra" {
   # trivy:ignore:AVD-GIT-0001
   visibility = "public"
 
-  has_issues           = true
-  has_projects         = true
-  has_wiki             = false
-  vulnerability_alerts = true
+  has_issues   = true
+  has_projects = true
+  has_wiki     = false
 
   # Linear history: squash or rebase, never a merge commit.
   allow_merge_commit     = false
@@ -44,10 +43,9 @@ resource "github_repository" "landing" {
   auto_init    = true
   topics       = ["github-pages"]
 
-  has_issues           = true
-  has_projects         = false
-  has_wiki             = false
-  vulnerability_alerts = true
+  has_issues   = true
+  has_projects = false
+  has_wiki     = false
 
   allow_merge_commit     = false
   allow_squash_merge     = true
@@ -58,6 +56,37 @@ resource "github_repository" "landing" {
   lifecycle {
     prevent_destroy = true
     ignore_changes  = [pages]
+  }
+}
+
+# vulnerability_alerts on github_repository is deprecated. These imports
+# adopt the alerts already enabled on each repository. There is no prior
+# resource address to move, and the repositories themselves stay in place.
+import {
+  to = github_repository_vulnerability_alerts.infra
+  id = var.infra_repository_name
+}
+
+resource "github_repository_vulnerability_alerts" "infra" {
+  repository = github_repository.infra.name
+  enabled    = true
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+import {
+  to = github_repository_vulnerability_alerts.landing
+  id = var.landing_repository_name
+}
+
+resource "github_repository_vulnerability_alerts" "landing" {
+  repository = github_repository.landing.name
+  enabled    = true
+
+  lifecycle {
+    prevent_destroy = true
   }
 }
 

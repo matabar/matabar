@@ -19,7 +19,7 @@ earlier private repository is archived as `matabar/personal-infra-archive`.
   - `modules/gcp/storage-bucket`: Versioned GCS bucket (used for Terraform state)
   - `modules/gcp/dns-zone`: Public Cloud DNS zone, DNSSEC, and record sets
   - `modules/gcp/github-wif`: Workload Identity Federation for GitHub Actions
-  - `modules/github/repos`: Landing repository, Pages, branch rules, and the production environment
+  - `modules/github/repos`: Landing repository, Pages, vulnerability alerts, branch rules, and the production environment
 - `live/`: Live infrastructure configurations.
   - `live/terragrunt.hcl`: Global Terragrunt settings
   - `live/prod/env.hcl`: Project id, billing account, and organization parent
@@ -243,7 +243,13 @@ free. Pages uses the GitHub Actions build type and the custom domain
 will not enforce HTTPS until the certificate is issued, which happens only
 after DNS delegates to GitHub. Set `pages_https_enforced = true` and apply
 again once `dig matabar.online` answers from GitHub and the Pages certificate
-is issued.
+is issued. Until that second apply, the module passes `https_enforced` as
+null.
+
+Dependabot vulnerability alerts for `personal-infra` and `matabar.online`
+are `github_repository_vulnerability_alerts` resources with `enabled = true`.
+Import blocks adopt the alerts already enabled on those repositories. The
+deprecated `vulnerability_alerts` argument is not set on `github_repository`.
 
 Both default branches require a pull request, linear history (squash or
 rebase), and reject force pushes. `personal-infra` also requires the status
