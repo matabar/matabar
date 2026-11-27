@@ -14,7 +14,11 @@ if ! git rev-parse --verify --quiet "${base}^{commit}" >/dev/null; then
 fi
 
 files="$(git diff --name-only "${base}...HEAD")"
-shared='^infra/(root\.hcl|live/terragrunt\.hcl|live/prod/env\.hcl|live/prod/gcp/provider\.hcl|live/prod/gcp/europe-west3/region\.hcl)$'
+# Files that change how every unit is planned or applied: the shared HCL, the
+# pinned tool versions, and the tooling and workflows that run Terragrunt.
+# infra/.tflint.hcl and infra/trivy.yaml are left out on purpose: they only
+# configure lint and scan jobs and cannot change a plan.
+shared='^(infra/(root\.hcl|live/terragrunt\.hcl|live/prod/env\.hcl|live/prod/gcp/provider\.hcl|live/prod/gcp/europe-west3/region\.hcl)|\.tool-versions|\.github/(actions/setup-tools|scripts)/.*|\.github/workflows/(terragrunt-run|deploy|pr-checks|drift)\.yml)$'
 if printf '%s\n' "$files" | grep -Eq "$shared"; then
   echo ALL
   exit 0
