@@ -326,13 +326,31 @@ means importing the pool and service accounts.
 
 ## Pull request checks
 
-Every pull request, and every push that is not to `main`, runs `fmt`,
-`validate`, `tflint`, `trivy`, and `plan / terragrunt`. Validate uses `-backend=false` and
-the committed provider lock. `plan` uses Workload Identity and does not lock
-state. It plans only units changed since the pull request base (or `main` on a
-branch push), plus units that depend on them. A separate `plan-comment` job,
-which has no cloud credentials, posts the log on the pull request. The project, state bucket, and GitHub identity units exclude
-themselves from CI plan and apply.
+Every pull request, and every push that is not to `main`, starts with a
+`changes` job. It maps the changed paths (`git diff` against the pull request
+base, or `main` on a branch push) to projects:
+
+| Project | Affected by changes under |
+| --- | --- |
+| `infra` | `infra/`, `.github/`, `.tool-versions` |
+| `site` | `apps/site/`, `.github/`, `.tool-versions` |
+
+Shared CI and tooling files affect every project. Other paths, such as docs,
+affect none.
+
+The infra jobs `fmt`, `validate`, `tflint`, `trivy`, and `plan / terragrunt`
+run only when `infra` is affected. Otherwise they report as skipped, which
+counts as passing. Validate uses `-backend=false` and the committed provider
+lock. `plan` uses Workload Identity and does not lock state. It plans only
+units changed since the pull request base (or `main` on a branch push), plus
+units that depend on them. A separate `plan-comment` job, which has no cloud
+credentials, posts the log on the pull request. Fork pull requests get no plan.
+The project, state bucket, and GitHub identity units exclude themselves from CI
+plan and apply.
+
+A final `ci` job always runs. It fails when any job that ran failed or was
+cancelled, and passes when jobs were skipped. It is the one check to require:
+a new project adds its jobs to the `ci` job's `needs`.
 
 Tool versions are pinned in `.tool-versions`. The `plan` check stays red until
 the `WIF_PLAN_PROVIDER` and `WIF_PLAN_SERVICE_ACCOUNT` repository variables

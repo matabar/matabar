@@ -14,8 +14,52 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Maps changed paths to projects. Every other job keys off these outputs.
+  # Shared CI and tooling files (.github/, .tool-versions) affect every project.
+  changes:
+    name: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      infra: ${{ steps.filter.outputs.infra }}
+      site: ${{ steps.filter.outputs.site }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Detect affected projects
+        id: filter
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          if [ -n "$PR_BASE_SHA" ]; then
+            base="$PR_BASE_SHA"
+          else
+            git fetch --no-tags origin main
+            base="origin/main"
+          fi
+          files="$(git diff --name-only "${base}...HEAD")"
+          echo "Changed files:"
+          printf '%s\n' "$files"
+          infra=false
+          site=false
+          if printf '%s\n' "$files" | grep -Eq '^(infra/|\.github/|\.tool-versions$)'; then
+            infra=true
+          fi
+          if printf '%s\n' "$files" | grep -Eq '^(apps/site/|\.github/|\.tool-versions$)'; then
+            site=true
+          fi
+          echo "infra=${infra}" >> "$GITHUB_OUTPUT"
+          echo "site=${site}" >> "$GITHUB_OUTPUT"
+          echo "infra=${infra} site=${site}"
   fmt:
     name: fmt
+    needs: changes
+    if: needs.changes.outputs.infra == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -33,6 +77,8 @@ jobs:
 
   validate:
     name: validate
+    needs: changes
+    if: needs.changes.outputs.infra == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -51,6 +97,8 @@ jobs:
 
   tflint:
     name: tflint
+    needs: changes
+    if: needs.changes.outputs.infra == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -72,6 +120,8 @@ jobs:
 
   trivy:
     name: trivy
+    needs: changes
+    if: needs.changes.outputs.infra == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -86,13 +136,18 @@ jobs:
 
   plan:
     name: plan
-    needs: [fmt, validate, tflint, trivy]
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    needs: [changes, fmt, validate, tflint, trivy]
+    # The called workflow skips its job when infra is not affected, so the
+    # "plan / terragrunt" check still reports. Skipped lint jobs must not block it.
+    if: >-
+      !cancelled() && !contains(needs.*.result, 'failure') &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     permissions:
       contents: read
       id-token: write
     uses: ./.github/workflows/terragrunt-run.yml
     with:
+      enabled: ${{ needs.changes.outputs.infra == 'true' }}
       mode: plan
       affected: true
       lock: false
@@ -107,8 +162,10 @@ jobs:
   # cloud credentials, cannot.
   plan-comment:
     name: plan-comment
-    needs: plan
-    if: always() && github.event_name == 'pull_request' && needs.plan.result != 'skipped'
+    needs: [changes, plan]
+    if: >-
+      always() && github.event_name == 'pull_request' &&
+      needs.changes.outputs.infra == 'true' && needs.plan.result != 'skipped'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -160,3 +217,22 @@ jobs:
                 body: comment,
               });
             }
+
+  # The single check to require. It always runs and fails when any job that
+  # ran failed or was cancelled. Skipped jobs are fine. Add new jobs to needs.
+  ci:
+    name: ci
+    needs: [changes, fmt, validate, tflint, trivy, plan, plan-comment]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Require every job that ran to pass
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Job results: ${RESULTS}"
+          case " ${RESULTS} " in
+            *" failure "*|*" cancelled "*) echo "A job failed or was cancelled."; exit 1 ;;
+          esac
