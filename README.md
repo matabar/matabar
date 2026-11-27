@@ -12,6 +12,7 @@ This repository creates the GCP project and the remote state bucket. It does not
   - `modules/gcp/storage-bucket`: Versioned GCS bucket (used for Terraform state)
   - `modules/gcp/dns-zone`: Public Cloud DNS zone, DNSSEC, and record sets
   - `modules/gcp/github-wif`: Workload Identity Federation for GitHub Actions
+  - `modules/github/repos`: Landing repository, Pages, branch rules, and the production environment
 - `live/`: Live infrastructure configurations.
   - `live/terragrunt.hcl`: Global Terragrunt settings
   - `live/prod/env.hcl`: Project id, billing account, and organization parent
@@ -21,6 +22,7 @@ This repository creates the GCP project and the remote state bucket. It does not
   - `live/prod/gcp/europe-west3/projects/matabar-prod/project/`: GCP project (local backend, bootstrap tier)
   - `live/prod/gcp/europe-west3/bootstrap/github-wif/`: GitHub Actions identity (local backend)
   - `live/prod/gcp/europe-west3/projects/matabar-prod/dns/matabar-online/`: `matabar.online` zone
+  - `live/prod/github/repos/`: landing repository, Pages, branch rules, production environment
 
 ## State Backend
 
@@ -75,6 +77,34 @@ This lets you run `terragrunt validate` or `plan` on a stack before its dependen
 When adding a new `dependency.*.outputs.*` reference in `inputs`, add the matching key to that dependency's `mock_outputs`.
 
 Do not read outputs from the local-backend units (`project`, `bootstrap/*`). Their state lives only on the machine that applied them, so CI and `init -backend=false` cannot read it. Units take the project id and the state bucket from `live/prod/env.hcl` and list bootstrap units in a `dependencies` block for apply order only.
+## GitHub repositories
+
+`live/prod/github/repos` uses the `integrations/github` provider. The token is
+the `GITHUB_TOKEN` environment variable. Prefer a GitHub App installation
+token. A fine-grained or classic PAT in that variable also works. The token is
+not a Terraform variable and is not written to state.
+
+The unit imports `matabar/personal-infra` and creates public
+`matabar/matabar.online`. The landing repository is public so GitHub Pages is
+free. Pages uses the GitHub Actions build type and the custom domain
+`matabar.online`. `pages_https_enforced` is `false` on the first apply. GitHub
+will not enforce HTTPS until the certificate is issued, which happens only
+after DNS delegates to GitHub. Set `pages_https_enforced = true` and apply
+again once `dig matabar.online` answers from GitHub and the Pages certificate
+is issued.
+
+Both default branches require a pull request, linear history (squash or
+rebase), and reject force pushes. `personal-infra` also requires the status
+checks `fmt`, `validate`, `tflint`, `trivy`, and `plan`. The production
+environment requires the GitHub user `matabar` to approve a deployment.
+`prevent_self_review` is false so the only maintainer can approve an apply
+they started. Deployments are limited to the protected default branch.
+
+The landing page content is not in this repository.
+
+App or token permissions: Administration (read and write), Environments
+(read and write), Pages (read and write), Contents (read), Metadata (read),
+and Repository creation (read and write). A classic PAT needs the `repo` scope.
 
 ## DNS
 

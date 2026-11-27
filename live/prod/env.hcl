@@ -15,4 +15,7 @@ locals {
 
   # Must match the bucket created by bootstrap/tfstate. root.hcl reads this.
   state_bucket = "matabar-prod-tfstate"
+
+  github_owner = "matabar"
+  domain       = "matabar.online"
 }
