@@ -113,8 +113,13 @@ what lets the token create `matabar.online`.
 ## DNS
 
 `dns/matabar-online` publishes a public zone for `matabar.online` with DNSSEC
-(ECDSA P-256, NSEC3). Record sets are a map on the live unit. The zone starts
-with no records other than the NS and SOA that Cloud DNS creates itself.
+(ECDSA P-256, NSEC3). The record map points the apex at the four GitHub Pages
+A and AAAA addresses and points `www` at `matabar.github.io.`.
+
+The `_github-pages-challenge-matabar` TXT record is omitted until
+`GITHUB_PAGES_CHALLENGE` is set to the value GitHub shows after the custom
+domain is saved. Set the same value as a GitHub repository variable before CI
+applies the zone, or a later apply will not keep the record.
 
 `enable_email_forwarding` is `false`. Set it to `true` to publish ImprovMX MX
 records (`10 mx1.improvmx.com.`, `20 mx2.improvmx.com.`) and SPF
