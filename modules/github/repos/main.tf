@@ -10,7 +10,10 @@ import {
 resource "github_repository" "infra" {
   name        = var.infra_repository_name
   description = var.infra_repository_description
-  visibility  = "private"
+  # Public so rulesets and environment reviewers work on GitHub Free. The
+  # repository holds no secrets; credentials live in Actions secrets and WIF.
+  # trivy:ignore:AVD-GIT-0001
+  visibility = "public"
 
   has_issues   = true
   has_projects = true
@@ -27,11 +30,6 @@ resource "github_repository" "infra" {
   lifecycle {
     prevent_destroy = true
     ignore_changes  = [pages]
-
-    precondition {
-      condition     = length(var.state_bucket) > 0
-      error_message = "state_bucket must be the name of the remote state bucket."
-    }
   }
 }
 

@@ -1,8 +1,3 @@
-variable "state_bucket" {
-  type        = string
-  description = "State bucket that must exist before this unit is applied. GitHub resources do not use it."
-}
-
 variable "infra_repository_name" {
   type        = string
   description = "Existing repository to import and protect. Example: personal-infra."

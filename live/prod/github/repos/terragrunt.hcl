@@ -22,17 +22,15 @@ terraform {
   source = "${get_repo_root()}/modules/github/repos"
 }
 
-dependency "tfstate" {
-  config_path = "../../gcp/europe-west3/bootstrap/tfstate"
-  mock_outputs = {
-    name = "matabar-prod-tfstate"
-  }
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+# Ordering only. Bootstrap units keep local state, so their outputs are not
+# readable in CI or on a fresh clone. Shared values come from env.hcl.
+dependencies {
+  paths = [
+    "../../gcp/europe-west3/bootstrap/tfstate",
+  ]
 }
 
 inputs = {
-  # Makes Terragrunt apply the state bucket before this unit.
-  state_bucket                   = dependency.tfstate.outputs.name
   infra_repository_name          = "personal-infra"
   infra_repository_description   = "GCP foundation and DNS for matabar.online"
   landing_repository_name        = local.env.domain
