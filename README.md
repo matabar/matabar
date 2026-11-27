@@ -265,9 +265,9 @@ import block adopts the alerts already present on the repository. The
 deprecated `vulnerability_alerts` argument is not set on `github_repository`.
 
 `main` requires a pull request, linear history (squash or rebase), and
-rejects force pushes. It also requires the status checks `fmt`, `validate`, `tflint`, `trivy`, and `plan / terragrunt` (the
-plan job calls a reusable workflow, so GitHub names its check
-`<caller job> / <called job>`). The production
+rejects force pushes. It also requires the single status check `ci`, the aggregate job of the PR
+checks workflow. It always runs and fails if any project job failed or was
+cancelled, so adding a project never changes the ruleset. The production
 environment requires the GitHub user `matabar` to approve a deployment.
 `prevent_self_review` is false so the only maintainer can approve an apply
 they started. Deployments are limited to the protected default branch.
