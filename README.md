@@ -110,11 +110,7 @@ Fine-grained PAT: resource owner `matabar`, **All repositories**, with
 repository permissions Administration (read and write), Environments (read and
 write), Pages (read and write), Contents (read and write, needed for
 `auto_init`), and Metadata (read). Administration write on all repositories is
-what lets the token create `matabar.online`.
-App or token permissions: Administration (read and write), Environments
-(read and write), Pages (read and write), Contents (read), Metadata (read),
-Vulnerability alerts (read and write), and Repository creation (read and write).
-A classic PAT needs the `repo` scope.
+what lets the token create `matabar.online` and turn on vulnerability alerts.
 
 ## DNS
 
