@@ -89,7 +89,7 @@ resource "terraform_data" "pages_cname" {
     }
     command = <<-EOT
       set -eu
-      get() { curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "$PAGES_API" | grep -o '"cname":[^,]*' || true; }
+      get() { curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "$PAGES_API" | tr -d ' ' | grep -o '"cname":[^,]*' || true; }
       want="\"cname\":\"$DOMAIN\""
       if [ "$(get)" != "$want" ]; then
         curl -sS -X PUT -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "$PAGES_API" -d "{$want}" > /dev/null || true
