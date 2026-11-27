@@ -69,9 +69,10 @@ case "${1:-all}" in
     # Check every tool up front so a missing one fails before any slow step.
     need tofu opentofu; need terragrunt terragrunt; need tflint tflint; need trivy trivy
     failed=""
-    for step in "fmt fmt" "validate validate" "tflint tflint_check" "trivy trivy_check"; do
-      # shellcheck disable=SC2086
-      (run $step) || failed="$failed ${step%% *}"
+    # Re-run this script per step: set -e is ignored inside a function called
+    # from an "||" list, which would hide early failures.
+    for step in fmt validate tflint trivy; do
+      "${BASH_SOURCE[0]}" "$step" || failed="$failed $step"
     done
     if [ -n "$failed" ]; then
       echo "FAILED:$failed" >&2
