@@ -3,7 +3,7 @@ include "root" {
 }
 
 include "provider" {
-  path = "${get_repo_root()}/live/prod/gcp/provider.hcl"
+  path = "${get_repo_root()}/infra/live/prod/gcp/provider.hcl"
 }
 
 # Bootstrap-tier: the project must exist before the GCS state bucket, so this
@@ -30,7 +30,7 @@ locals {
 }
 
 terraform {
-  source = "${get_repo_root()}/modules/gcp/project"
+  source = "${get_repo_root()}/infra/modules/gcp/project"
 }
 
 inputs = {

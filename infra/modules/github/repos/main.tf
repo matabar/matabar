@@ -54,7 +54,7 @@ resource "github_repository_vulnerability_alerts" "this" {
 resource "github_repository_pages" "this" {
   repository = github_repository.this.name
 
-  # GitHub Actions publishes the site from site/ (see the Pages workflow).
+  # GitHub Actions publishes the site from apps/site/ (see the Pages workflow).
   build_type = "workflow"
   cname      = var.pages_domain
 

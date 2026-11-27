@@ -3,7 +3,7 @@ include "root" {
 }
 
 include "provider" {
-  path = "${get_repo_root()}/live/prod/gcp/provider.hcl"
+  path = "${get_repo_root()}/infra/live/prod/gcp/provider.hcl"
 }
 
 # Bootstrap-tier and local-first. The CI service accounts cannot create
@@ -28,7 +28,7 @@ exclude {
 }
 
 terraform {
-  source = "${get_repo_root()}/modules/gcp/github-wif"
+  source = "${get_repo_root()}/infra/modules/gcp/github-wif"
 }
 
 locals {

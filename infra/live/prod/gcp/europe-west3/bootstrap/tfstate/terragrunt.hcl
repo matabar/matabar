@@ -3,7 +3,7 @@ include "root" {
 }
 
 include "provider" {
-  path = "${get_repo_root()}/live/prod/gcp/provider.hcl"
+  path = "${get_repo_root()}/infra/live/prod/gcp/provider.hcl"
 }
 
 # Bootstrap-tier: this unit creates the bucket that backs remote state, so it
@@ -25,7 +25,7 @@ remote_state {
 }
 
 terraform {
-  source = "${get_repo_root()}/modules/gcp/storage-bucket"
+  source = "${get_repo_root()}/infra/modules/gcp/storage-bucket"
 }
 
 locals {
