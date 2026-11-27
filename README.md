@@ -330,7 +330,12 @@ Every pull request, and every push that is not to `main`, runs `fmt`,
 `validate`, `tflint`, `trivy`, and `plan / terragrunt`. Validate uses `-backend=false` and
 the committed provider lock. `plan` uses Workload Identity and does not lock
 state. It plans only units changed since the pull request base (or `main` on a
-branch push), plus units that depend on them. A separate `plan-comment` job,
+branch push), plus units that depend on them. A change to shared
+configuration or tooling plans every unit: `infra/root.hcl`, the shared
+`env.hcl`, `region.hcl`, `provider.hcl` and `terragrunt.hcl`, `.tool-versions`,
+`.github/actions/setup-tools/`, `.github/scripts/`, and the `pr-checks`,
+`deploy`, `drift` and `terragrunt-run` workflows. `infra/.tflint.hcl` and
+`infra/trivy.yaml` are not on that list because they cannot change a plan. A separate `plan-comment` job,
 which has no cloud credentials, posts the log on the pull request. The project, state bucket, and GitHub identity units exclude
 themselves from CI plan and apply.
 
