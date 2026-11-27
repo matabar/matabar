@@ -112,7 +112,7 @@ jobs:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           BASE_REVISION: origin/main
           GITHUB_TOKEN: ${{ steps.gh-token.outputs.token }}
-          GITHUB_PAGES_CHALLENGE: ${{ inputs.github_pages_challenge }}
+          PAGES_CHALLENGE: ${{ inputs.github_pages_challenge }}
         run: bash .github/scripts/terragrunt-ci.sh
 
       - name: Upload plan log
