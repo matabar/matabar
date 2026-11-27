@@ -352,7 +352,12 @@ apply that is already running.
 A daily plan, also available from the Actions tab, plans every CI-managed
 unit. Drift opens or updates an issue titled `Drift detected in matabar`
 and closes it when the next clean plan runs. Dependabot proposes weekly
-updates for GitHub Actions and the pinned providers. `CODEOWNERS` requests
+updates for GitHub Actions (labels `dependencies`, `ci`) and the pinned
+providers (labels `dependencies`, `infra`). One `directories` glob covers every
+module under `infra/modules/*/*`, so a new module needs no config change, and
+provider bumps across modules arrive as one grouped pull request. Dependabot
+only applies labels that already exist; `infra` and `ci` were created with
+`gh label create`, outside OpenTofu. `CODEOWNERS` requests
 review from `@matabar`.
 
 ## Git Hooks
