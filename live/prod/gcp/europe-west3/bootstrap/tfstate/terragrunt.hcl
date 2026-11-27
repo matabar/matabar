@@ -29,16 +29,14 @@ locals {
   region_vars = read_terragrunt_config(find_in_parent_folders("region.hcl"))
 }
 
-dependency "project" {
-  config_path = "../../projects/matabar-prod/project"
-  mock_outputs = {
-    project_id = "matabar-online-prod"
-  }
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+# Ordering only. The project unit keeps local state, so its outputs are not
+# readable in CI or on a fresh clone. The project id comes from env.hcl.
+dependencies {
+  paths = ["../../projects/matabar-prod/project"]
 }
 
 inputs = {
   name       = local.env.state_bucket
-  project_id = dependency.project.outputs.project_id
+  project_id = local.env.project_id
   location   = local.region_vars.locals.region
 }
