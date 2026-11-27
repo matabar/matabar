@@ -1,0 +1,33 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+# One apply at a time. A later push waits; it does not cancel the apply
+# that is already holding the state lock.
+concurrency:
+  group: production-apply
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: apply
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/terragrunt-run.yml
+    with:
+      mode: plan-apply
+      affected: true
+      lock: true
+      post_comment: false
+      workload_identity_provider: ${{ vars.WIF_APPLY_PROVIDER }}
+      service_account: ${{ vars.WIF_APPLY_SERVICE_ACCOUNT }}
+      github_pages_challenge: ${{ vars.GITHUB_PAGES_CHALLENGE }}
+    secrets: inherit

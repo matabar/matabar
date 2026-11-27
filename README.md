@@ -166,6 +166,12 @@ Tool versions are pinned in `.tool-versions`. The `plan` check stays red until
 the `WIF_PLAN_PROVIDER` and `WIF_PLAN_SERVICE_ACCOUNT` repository variables
 exist.
 
+A push to `main` re-plans the affected units and applies them. That job uses
+the `production` environment, so it waits for the required reviewer, and it
+locks remote state. The concurrency group `production-apply` does not cancel
+an apply that is already running. It uses `WIF_APPLY_PROVIDER` and
+`WIF_APPLY_SERVICE_ACCOUNT`.
+
 ## Git Hooks
 
 Enable local hooks (blocks direct commits to `main`, auto-formats and re-stages
