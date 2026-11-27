@@ -7,6 +7,10 @@ This repository creates the GCP project, the remote state bucket, Cloud DNS for
 does not run a virtual machine. The landing page content lives in
 `matabar/matabar.online`, not here.
 
+This repository is public. Its history was rewritten on 2026-11-27 to drop
+author email addresses and the retired VM stack's SSH allowlist IPs; the
+earlier private repository is archived as `matabar/personal-infra-archive`.
+
 ## Directory Structure
 
 - `root.hcl`: Root configuration. Generates the remote state backend (GCS).
@@ -110,26 +114,26 @@ Copy the `github-wif` outputs into repository variables on `matabar/personal-inf
 | `WIF_APPLY_PROVIDER` | `apply_workload_identity_provider` |
 | `WIF_APPLY_SERVICE_ACCOUNT` | `apply_service_account` |
 
-Create a GitHub App (preferred) or a PAT before the GitHub unit. This
-repository cannot create that credential. Install the app on the user account
-`matabar` for all repositories, with Administration, Environments, Pages,
-Contents (read), Metadata (read), Vulnerability alerts, and Repository
-creation. Mint an installation token, or use a classic PAT with the `repo`
-scope, and export it only for the local apply:
+Create a fine-grained PAT before the GitHub unit (permissions under
+[GitHub repositories](#github-repositories)). This repository cannot create
+that credential, and a GitHub App installation token cannot create a
+repository under a personal account. Store it as the `GH_ADMIN_TOKEN`
+Actions secret, not in git:
+
+```bash
+gh secret set GH_ADMIN_TOKEN --repo matabar/personal-infra   # paste when prompted
+```
+
+To apply the GitHub unit locally instead, export the token for that shell only:
 
 ```bash
 export GITHUB_TOKEN=...   # not a TF_VAR; it is not written to state
 terragrunt --working-dir live/prod/github/repos apply
 ```
 
-For later CI applies, store the same credential as secrets, not in git:
-
-| Secret | Purpose |
-| --- | --- |
-| `GH_APP_ID` | GitHub App id |
-| `GH_APP_INSTALLATION_ID` | Installation id |
-| `GH_APP_PRIVATE_KEY` | App private key PEM |
-| `GH_ADMIN_TOKEN` | Classic or fine-grained PAT, used only when the app secrets are unset |
+The run workflow still accepts GitHub App secrets (`GH_APP_ID`,
+`GH_APP_PRIVATE_KEY`) and prefers them over `GH_ADMIN_TOKEN` when set. That
+only works once `matabar.online` exists.
 
 The GitHub unit imports `personal-infra`, creates public `matabar/matabar.online`,
 turns on Actions-based Pages for `matabar.online`, protects `main`, and creates
@@ -171,11 +175,13 @@ after the Google name servers answer. A DS published while Namecheap is still
 authoritative makes validating resolvers treat the domain as bogus.
 
 After the Pages custom domain exists, GitHub shows a TXT value for
-`_github-pages-challenge-matabar`. Export it and set the same repository
-variable so a later CI apply does not delete the record:
+`_github-pages-challenge-matabar`. Set it as the `PAGES_CHALLENGE` repository
+variable (Actions variables cannot start with `GITHUB_`) so CI keeps the
+record, then apply the zone (or re-run Deploy):
 
 ```bash
-export GITHUB_PAGES_CHALLENGE='the-value-from-github'
+gh variable set PAGES_CHALLENGE --repo matabar/personal-infra --body 'the-value-from-github'
+export PAGES_CHALLENGE='the-value-from-github'
 terragrunt --working-dir live/prod/gcp/europe-west3/projects/matabar-prod/dns/matabar-online apply
 ```
 
@@ -186,14 +192,14 @@ it until the certificate exists.
 
 Check DNSSEC with `dig +dnssec SOA matabar.online @1.1.1.1` and
 [dnsviz.net](https://dnsviz.net). Re-run the failed Deploy workflow and approve
-it in the `production` environment.
+its `apply` job in the `production` environment after reading the `plan` job.
 
 ### What cannot be done in this repository
 
 - `gcloud auth login` and Application Default Credentials
 - Granting `roles/billing.user` on the billing account
 - Choosing an organization or folder parent, if the Google account requires one
-- Creating the GitHub App or PAT, and storing its secret in GitHub
+- Creating the fine-grained PAT and storing it as `GH_ADMIN_TOKEN`
 - The Namecheap nameserver change
 - The Namecheap DS record
 - The Pages verification string, until GitHub displays it
@@ -289,11 +295,11 @@ means importing the pool and service accounts.
 ## Pull request checks
 
 Every pull request, and every push that is not to `main`, runs `fmt`,
-`validate`, `tflint`, `trivy`, and `plan`. Validate uses `-backend=false` and
+`validate`, `tflint`, `trivy`, and `plan / terragrunt`. Validate uses `-backend=false` and
 the committed provider lock. `plan` uses Workload Identity and does not lock
 state. It plans only units changed since the pull request base (or `main` on a
-branch push), plus units that depend on them, and posts the log on the pull
-request. The project, state bucket, and GitHub identity units exclude
+branch push), plus units that depend on them. A separate `plan-comment` job,
+which has no cloud credentials, posts the log on the pull request. The project, state bucket, and GitHub identity units exclude
 themselves from CI plan and apply.
 
 Tool versions are pinned in `.tool-versions`. The `plan` check stays red until
@@ -306,8 +312,9 @@ identity, so the plan is in the run before anyone approves. When it has
 changes, the `apply` job runs in the `production` environment, waits for the
 required reviewer, locks remote state, and applies the same units with
 `WIF_APPLY_PROVIDER` and `WIF_APPLY_SERVICE_ACCOUNT`. A plan with no changes
-skips the apply. A manual run from the Actions tab (`workflow_dispatch`) plans
-every unit. The concurrency group `production-apply` does not cancel an
+skips the apply. A push with no usable previous commit, or a manual run from
+the Actions tab (`workflow_dispatch`), plans every unit. The concurrency group
+`production-apply` does not cancel an
 apply that is already running.
 
 A daily plan, also available from the Actions tab, plans every CI-managed

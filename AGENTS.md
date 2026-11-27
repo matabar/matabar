@@ -24,11 +24,12 @@
 - **Cloud Providers**: GCP under `live/prod/gcp/`. The provider block is generated via `provider.hcl`.
 - **State Backend**: All units use the GCS backend (`matabar-prod-tfstate`) defined in `root.hcl`.
 - **Bootstrap Tier**: `projects/matabar-prod/project`, `bootstrap/tfstate`, and `bootstrap/github-wif` intentionally override `remote_state` to a **local** backend. Do NOT remove these overrides. The project and the state bucket must exist before GCS-backed state is usable, and CI must not rewrite its own Workload Identity trust.
-- **Apply Order**: project -> tfstate bucket -> github-wif -> dns/matabar-online and github/repos. The first three are bootstrap-tier (local state). `github-wif` is excluded from CI `plan` and `apply`. DNS and GitHub use the GCS backend. Do not apply from a cloud agent; the owner applies locally.
+- **Apply Order**: project -> tfstate bucket -> github-wif -> dns/matabar-online and github/repos. The first three are bootstrap-tier (local state). `github-wif` is excluded from CI `plan` and `apply`. DNS and GitHub use the GCS backend and are applied by the Deploy workflow after merge. The owner applies the bootstrap tier locally; never from a cloud agent.
 - **Dependency mocks**: Every `dependency` block that feeds `inputs` must define `mock_outputs` for each referenced output and `mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]`. Mocks are never used on `apply`.
 - **Bootstrap outputs**: Never read `dependency.*.outputs` from a local-backend (bootstrap-tier) unit. Their state exists only on the owner's machine, so CI and `validate -backend=false` cannot read it. Take shared values (project id, state bucket) from `live/prod/env.hcl` and use a `dependencies` block for ordering.
 - **Live Layout**: Units live under `live/prod/gcp/europe-west3/` (`projects/matabar-prod/` and `bootstrap/`).
 - **Secrets**: Never commit `*.tfstate`, `*.tfvars`, `.env`, PEM files, or credential JSON. There is no VM and no SSH key in this repo.
+- **Public repository**: `personal-infra` is public. Never commit personal data either: email addresses, home or office IPs, or anything identifying beyond the GitHub login. Commit with the GitHub noreply address.
 
 ## Workflow & Git
 - **Branching**: 
