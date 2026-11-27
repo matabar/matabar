@@ -3,6 +3,11 @@ name: Terragrunt run
 on:
   workflow_call:
     inputs:
+      enabled:
+        description: Set to false to skip the run. The job then reports as skipped.
+        required: false
+        type: boolean
+        default: true
       mode:
         description: plan, apply, or plan-apply
         required: true
@@ -52,6 +57,7 @@ permissions:
 jobs:
   run:
     name: terragrunt
+    if: inputs.enabled
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     outputs:
