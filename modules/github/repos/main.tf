@@ -69,9 +69,11 @@ resource "github_repository_pages" "landing" {
   build_type = "workflow"
   cname      = var.pages_domain
 
-  # GitHub rejects https_enforced until DNS points at Pages and the
-  # certificate state is "issued". First apply keeps this false.
-  https_enforced = var.pages_https_enforced
+  # Any https_enforced value, even false, makes the provider send the field,
+  # and GitHub answers "404 The certificate does not exist yet" until DNS
+  # points at Pages and the certificate is issued. Leave it unset (null)
+  # until then; set pages_https_enforced = true afterwards.
+  https_enforced = var.pages_https_enforced ? true : null
 }
 
 resource "github_repository_ruleset" "infra_main" {
