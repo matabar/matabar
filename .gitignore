@@ -3,6 +3,8 @@
 .terraform.*
 # Provider lock files are .terraform.lock.hcl and must be committed.
 !.terraform.lock.hcl
+# Units under live/ copy the module lock on init; only the module copy is kept.
+live/**/.terraform.lock.hcl
 *.tfstate
 *.tfstate.backup
 *.tfstate.lock.info
