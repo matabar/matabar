@@ -1,0 +1,119 @@
+name: Drift
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: drift
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: plan
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/terragrunt-run.yml
+    with:
+      mode: plan
+      affected: false
+      lock: false
+      post_comment: false
+      workload_identity_provider: ${{ vars.WIF_PLAN_PROVIDER }}
+      service_account: ${{ vars.WIF_PLAN_SERVICE_ACCOUNT }}
+      github_pages_challenge: ${{ vars.GITHUB_PAGES_CHALLENGE }}
+    secrets: inherit
+
+  issue:
+    name: issue
+    needs: plan
+    if: needs.plan.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Download plan
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: terragrunt-plan
+          path: plan-log
+
+      - name: Open or update the drift issue
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            function findPlan(dir) {
+              for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+                const full = path.join(dir, entry.name);
+                if (entry.isDirectory()) {
+                  const found = findPlan(full);
+                  if (found) return found;
+                } else if (entry.name === 'plan.txt') {
+                  return full;
+                }
+              }
+              return null;
+            }
+            const file = findPlan('plan-log');
+            const log = file ? fs.readFileSync(file, 'utf8') : 'Plan log was not produced.';
+            const plans = [...log.matchAll(/Plan: (\d+) to add, (\d+) to change, (\d+) to destroy/g)];
+            const drifted = plans.some((match) => match.slice(1).some((count) => count !== '0'));
+            const title = 'Drift detected in personal-infra';
+            const { data } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+            });
+            const existing = data.find((issue) => issue.title === title);
+            const max = 60000;
+            const bodyLog = log.length > max ? log.slice(0, max) + '\n\n… truncated …' : log;
+            if (!drifted) {
+              if (existing) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: existing.number,
+                  body: `No drift in the scheduled plan: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+                });
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: existing.number,
+                  state: 'closed',
+                });
+              }
+              return;
+            }
+            const body = [
+              'A scheduled plan found changes that are not in the configuration.',
+              '',
+              `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              '',
+              '```',
+              bodyLog,
+              '```',
+            ].join('\n');
+            if (existing) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+              });
+            }

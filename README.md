@@ -176,6 +176,12 @@ skips the apply. A manual run from the Actions tab (`workflow_dispatch`) plans
 every unit. The concurrency group `production-apply` does not cancel an
 apply that is already running.
 
+A daily plan, also available from the Actions tab, plans every CI-managed
+unit. Drift opens or updates an issue titled `Drift detected in personal-infra`
+and closes it when the next clean plan runs. Dependabot proposes weekly
+updates for GitHub Actions and the pinned providers. `CODEOWNERS` requests
+review from `@matabar`.
+
 ## Git Hooks
 
 Enable local hooks (blocks direct commits to `main`, auto-formats and re-stages
