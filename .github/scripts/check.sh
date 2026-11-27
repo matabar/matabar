@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# Run the pull request checks locally: fmt, validate, tflint, trivy.
+# Run the pull request checks locally: fmt, validate, tflint, trivy (infra) and
+# site-html, site-links (apps/site).
 # The commands mirror .github/workflows/pr-checks.yml. Change both together.
 #
-# Usage: check.sh [fmt|validate|tflint|trivy|all]   (default: all)
+# Usage: check.sh [fmt|validate|tflint|trivy|site-html|site-links|site-links-external|all]   (default: all)
+# site-links-external is advisory (network) and not part of all.
 set -euo pipefail
 
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
@@ -55,6 +57,26 @@ trivy_check() {
   trivy config --config infra/trivy.yaml .
 }
 
+# apps/site checks. CI installs the same pinned versions (see .tool-versions).
+site_html() {
+  need html-validate npm:html-validate
+  html-validate --config .github/site-checks/htmlvalidate.json apps/site
+}
+
+# Internal links and fragments are checked strictly and offline.
+site_links() {
+  need lychee lychee
+  lychee --offline --include-fragments --no-progress --root-dir "$root/apps/site" 'apps/site/**/*.html'
+}
+
+# External links need the network and can flake, so this is advisory: retries,
+# generous timeout, and rate limits or bot blocks (403, 429) count as reachable.
+site_links_external() {
+  need lychee lychee
+  lychee --max-retries 3 --retry-wait-time 5 --timeout 20 --accept '200..=299,403,429' \
+    --no-progress --root-dir "$root/apps/site" 'apps/site/**/*.html'
+}
+
 run() {
   echo "==> $1"
   "$2"
@@ -65,13 +87,17 @@ case "${1:-all}" in
   validate) run validate validate ;;
   tflint) run tflint tflint_check ;;
   trivy) run trivy trivy_check ;;
+  site-html) run site-html site_html ;;
+  site-links) run site-links site_links ;;
+  site-links-external) run site-links-external site_links_external ;;
   all)
     # Check every tool up front so a missing one fails before any slow step.
     need tofu opentofu; need terragrunt terragrunt; need tflint tflint; need trivy trivy
+    need html-validate npm:html-validate; need lychee lychee
     failed=""
     # Re-run this script per step: set -e is ignored inside a function called
     # from an "||" list, which would hide early failures.
-    for step in fmt validate tflint trivy; do
+    for step in fmt validate tflint trivy site-html site-links; do
       "${BASH_SOURCE[0]}" "$step" || failed="$failed $step"
     done
     if [ -n "$failed" ]; then
@@ -80,5 +106,5 @@ case "${1:-all}" in
     fi
     echo "All checks passed."
     ;;
-  *) echo "Usage: $0 [fmt|validate|tflint|trivy|all]" >&2; exit 2 ;;
+  *) echo "Usage: $0 [fmt|validate|tflint|trivy|site-html|site-links|site-links-external|all]" >&2; exit 2 ;;
 esac

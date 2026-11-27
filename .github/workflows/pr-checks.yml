@@ -134,6 +134,62 @@ jobs:
       - name: Trivy config
         run: trivy config --config infra/trivy.yaml .
 
+  site-html:
+    name: site-html
+    needs: changes
+    if: needs.changes.outputs.site == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .tool-versions
+      - name: Install html-validate
+        run: |
+          set -euo pipefail
+          want="$(awk '$1 == "npm:html-validate" { print $2 }' .tool-versions)"
+          test "$want" = "11.23.0"
+          npm install --global --ignore-scripts "html-validate@${want}"
+      - name: HTML validation
+        run: .github/scripts/check.sh site-html
+
+  site-links:
+    name: site-links
+    needs: changes
+    if: needs.changes.outputs.site == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install lychee
+        run: |
+          set -euo pipefail
+          test "$(awk '$1 == "lychee" { print $2 }' .tool-versions)" = "0.24.2"
+          tmp=$(mktemp -d)
+          curl -fsSL -o "$tmp/lychee.tar.gz" \
+            https://github.com/lycheeverse/lychee/releases/download/lychee-v0.24.2/lychee-x86_64-unknown-linux-gnu.tar.gz
+          echo "1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a  $tmp/lychee.tar.gz" | sha256sum -c -
+          tar -xzf "$tmp/lychee.tar.gz" -C "$tmp"
+          install -m 0755 "$(find "$tmp" -name lychee -type f | head -n1)" /usr/local/bin/lychee
+          rm -rf "$tmp"
+      # Strict: broken internal links and fragments fail the check. Offline, so
+      # it cannot flake on the network.
+      - name: Internal links
+        run: .github/scripts/check.sh site-links
+      # Advisory: external sites can be down or rate-limit CI. Retries are
+      # enabled and a failure is a warning, never a failed check.
+      - name: External links (advisory)
+        continue-on-error: true
+        run: .github/scripts/check.sh site-links-external
+
   plan:
     name: plan
     needs: [changes, fmt, validate, tflint, trivy]
@@ -222,7 +278,7 @@ jobs:
   # ran failed or was cancelled. Skipped jobs are fine. Add new jobs to needs.
   ci:
     name: ci
-    needs: [changes, fmt, validate, tflint, trivy, plan, plan-comment]
+    needs: [changes, fmt, validate, tflint, trivy, site-html, site-links, plan, plan-comment]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
