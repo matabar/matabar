@@ -153,7 +153,8 @@ only works once `matabar.online` exists.
 The GitHub unit imports `matabar/matabar` and its vulnerability alerts, turns
 on Actions-based Pages for `matabar.online`, protects `main`, and creates the
 `production` environment with `matabar` as the required reviewer.
-`pages_https_enforced` stays false on this first apply.
+`pages_https_enforced` was false on the first apply; it is `true` now that the
+certificate exists.
 
 Then publish the zone:
 
@@ -200,10 +201,10 @@ export PAGES_CHALLENGE='the-value-from-github'
 terragrunt --working-dir live/prod/gcp/europe-west3/projects/matabar-prod/dns/matabar-online apply
 ```
 
-When GitHub reports the Pages certificate as issued, set
-`pages_https_enforced = true` in `live/prod/github/repos/terragrunt.hcl` and
-apply that unit again. The first apply cannot enforce HTTPS; GitHub rejects
-it until the certificate exists.
+`pages_https_enforced` is `true` in `live/prod/github/repos/terragrunt.hcl`. The
+first apply of a fresh setup cannot enforce HTTPS because GitHub rejects it
+until the certificate exists, so set it to `false` there, and switch it to
+`true` once GitHub reports the Pages certificate as issued.
 
 Check DNSSEC with `dig +dnssec SOA matabar.online @1.1.1.1` and
 [dnsviz.net](https://dnsviz.net). Re-run the failed Deploy workflow and approve
@@ -242,12 +243,11 @@ token is not a Terraform variable and is not written to state.
 
 The unit imports `matabar/matabar` (public, so rulesets, environment
 reviewers and GitHub Pages work on GitHub Free). Pages uses the GitHub Actions build type and the custom domain
-`matabar.online`. `pages_https_enforced` is `false` on the first apply. GitHub
-will not enforce HTTPS until the certificate is issued, which happens only
-after DNS delegates to GitHub. Set `pages_https_enforced = true` and apply
-again once `dig matabar.online` answers from GitHub and the Pages certificate
-is issued. Until that second apply, the module passes `https_enforced` as
-null.
+`matabar.online`. `pages_https_enforced` is `true`. GitHub will not enforce
+HTTPS until the certificate is issued, which happens only after DNS delegates
+to GitHub, so a fresh setup starts with `false` and flips it to `true` once
+`dig matabar.online` answers from GitHub and the Pages certificate is issued.
+While it is `false`, the module passes `https_enforced` as null.
 
 Dependabot vulnerability alerts for `matabar` are a
 `github_repository_vulnerability_alerts` resource with `enabled = true`. An
