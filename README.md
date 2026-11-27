@@ -2,7 +2,10 @@
 
 GCP foundation for personal projects, managed with OpenTofu and Terragrunt.
 
-This repository creates the GCP project and the remote state bucket. It does not run a virtual machine.
+This repository creates the GCP project, the remote state bucket, Cloud DNS for
+`matabar.online`, and the GitHub repository that serves the landing page. It
+does not run a virtual machine. The landing page content lives in
+`matabar/matabar.online`, not here.
 
 ## Directory Structure
 
@@ -52,21 +55,152 @@ Linking billing requires `roles/billing.user` on billing account
 identity that owns the Application Default Credentials. Inside an organization,
 that identity also needs `roles/resourcemanager.projectCreator`.
 
-## Apply Order
+## Bootstrap and cutover
 
-Nothing in this repository has been applied yet. From the repo root, with
-[Application Default Credentials](https://cloud.google.com/docs/authentication/application-default-credentials)
-from `gcloud auth application-default login`:
+Nothing in this repository has been applied. Merge this stack before the first
+apply. Branch protection is not active until the GitHub unit is applied, so
+the merge is not blocked by the new required checks. The deploy workflow on
+`main` fails until the steps below are done; re-run it at the end.
+
+Install OpenTofu 1.13.10, Terragrunt 1.2.3, TFLint 0.66.0, and Trivy 0.76.2
+(`mise install` reads `.tool-versions`). Then:
 
 ```bash
-# 1. Project (local backend)
-cd live/prod/gcp/europe-west3/projects/matabar-prod/project
-terragrunt apply
-
-# 2. State bucket (local backend)
-cd ../../../bootstrap/tfstate
-terragrunt apply
+git config core.hooksPath .githooks
+gcloud auth login
+gcloud auth application-default login
 ```
+
+Do not set an Application Default Credentials quota project until some project
+exists. If project creation fails because an API has no quota project, and you
+already have a different GCP project, run
+`gcloud auth application-default set-quota-project EXISTING_PROJECT_ID` and
+apply again.
+
+`org_id` and `folder_id` in `live/prod/env.hcl` are null, so the project is
+created with no organization parent. That matches a personal Google account.
+If the account is inside Cloud Identity or Workspace and the organization
+forbids parentless projects, set exactly one of `org_id` or `folder_id`.
+Inside an organization the identity also needs
+`roles/resourcemanager.projectCreator`. Linking billing needs
+`roles/billing.user` on `01840C-61ACE5-5FE73D`. Billing Account Administrator
+is not required. If Google says `matabar-online-prod` is taken, change
+`project_id` in `env.hcl` only.
+
+From the repo root, with user credentials (not Workload Identity):
+
+```bash
+terragrunt --working-dir live/prod/gcp/europe-west3/projects/matabar-prod/project apply
+terragrunt --working-dir live/prod/gcp/europe-west3/bootstrap/tfstate apply
+terragrunt --working-dir live/prod/gcp/europe-west3/bootstrap/github-wif apply
+```
+
+The first three units keep **local** state. Back up these gitignored files:
+
+- `live/prod/gcp/europe-west3/projects/matabar-prod/project/terraform.tfstate`
+- `live/prod/gcp/europe-west3/bootstrap/tfstate/terraform.tfstate`
+- `live/prod/gcp/europe-west3/bootstrap/github-wif/terraform.tfstate`
+
+Copy the `github-wif` outputs into repository variables on `matabar/personal-infra`:
+
+| Variable | Output |
+| --- | --- |
+| `WIF_PLAN_PROVIDER` | `plan_workload_identity_provider` |
+| `WIF_PLAN_SERVICE_ACCOUNT` | `plan_service_account` |
+| `WIF_APPLY_PROVIDER` | `apply_workload_identity_provider` |
+| `WIF_APPLY_SERVICE_ACCOUNT` | `apply_service_account` |
+
+Create a GitHub App (preferred) or a PAT before the GitHub unit. This
+repository cannot create that credential. Install the app on the user account
+`matabar` for all repositories, with Administration, Environments, Pages,
+Contents (read), Metadata (read), Vulnerability alerts, and Repository
+creation. Mint an installation token, or use a classic PAT with the `repo`
+scope, and export it only for the local apply:
+
+```bash
+export GITHUB_TOKEN=...   # not a TF_VAR; it is not written to state
+terragrunt --working-dir live/prod/github/repos apply
+```
+
+For later CI applies, store the same credential as secrets, not in git:
+
+| Secret | Purpose |
+| --- | --- |
+| `GH_APP_ID` | GitHub App id |
+| `GH_APP_INSTALLATION_ID` | Installation id |
+| `GH_APP_PRIVATE_KEY` | App private key PEM |
+| `GH_ADMIN_TOKEN` | Classic or fine-grained PAT, used only when the app secrets are unset |
+
+The GitHub unit imports `personal-infra`, creates public `matabar/matabar.online`,
+turns on Actions-based Pages for `matabar.online`, protects `main`, and creates
+the `production` environment with `matabar` as the required reviewer.
+`pages_https_enforced` stays false on this first apply.
+
+Then publish the zone:
+
+```bash
+terragrunt --working-dir live/prod/gcp/europe-west3/projects/matabar-prod/dns/matabar-online apply
+terragrunt --working-dir live/prod/gcp/europe-west3/projects/matabar-prod/dns/matabar-online output name_servers
+```
+
+In Namecheap, open the domain, set Nameservers to **Custom DNS**, and enter
+the name servers from that output. This is manual. Switching nameservers turns
+off Namecheap BasicDNS, including the leftover email forwarding
+(`eforward1-5.registrar-servers.com` and
+`v=spf1 include:spf.efwd.registrar-servers.com ~all`). Mail for the domain
+stops until `enable_email_forwarding` is set and an ImprovMX account exists.
+ImprovMX is not created by Terraform.
+
+Confirm the delegation before any DS record:
+
+```bash
+dig NS matabar.online @1.1.1.1
+dig NS matabar.online @8.8.8.8
+dig SOA matabar.online @1.1.1.1
+```
+
+The NS answers should be the Google name servers. Then:
+
+```bash
+terragrunt --working-dir live/prod/gcp/europe-west3/projects/matabar-prod/dns/matabar-online output dnssec_ds_records
+```
+
+At Namecheap, add one DS record using the `sha256` digest: key tag, algorithm
+**13** (`ecdsap256sha256`), digest type **2**, and the digest. Add the DS only
+after the Google name servers answer. A DS published while Namecheap is still
+authoritative makes validating resolvers treat the domain as bogus.
+
+After the Pages custom domain exists, GitHub shows a TXT value for
+`_github-pages-challenge-matabar`. Export it and set the same repository
+variable so a later CI apply does not delete the record:
+
+```bash
+export GITHUB_PAGES_CHALLENGE='the-value-from-github'
+terragrunt --working-dir live/prod/gcp/europe-west3/projects/matabar-prod/dns/matabar-online apply
+```
+
+When GitHub reports the Pages certificate as issued, set
+`pages_https_enforced = true` in `live/prod/github/repos/terragrunt.hcl` and
+apply that unit again. The first apply cannot enforce HTTPS; GitHub rejects
+it until the certificate exists.
+
+Check DNSSEC with `dig +dnssec SOA matabar.online @1.1.1.1` and
+[dnsviz.net](https://dnsviz.net). Re-run the failed Deploy workflow and approve
+it in the `production` environment.
+
+### What cannot be done in this repository
+
+- `gcloud auth login` and Application Default Credentials
+- Granting `roles/billing.user` on the billing account
+- Choosing an organization or folder parent, if the Google account requires one
+- Creating the GitHub App or PAT, and storing its secret in GitHub
+- The Namecheap nameserver change
+- The Namecheap DS record
+- The Pages verification string, until GitHub displays it
+- Approving the `production` deployment
+- The second apply that turns on HTTPS, after the certificate is issued
+- An ImprovMX account, if email forwarding is wanted
+- The landing page files, which belong in `matabar/matabar.online`
 
 ### Terragrunt dependencies
 
