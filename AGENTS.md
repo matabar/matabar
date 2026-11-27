@@ -19,6 +19,7 @@
 - **Local checks**: Run `mise run check` (or `.github/scripts/check.sh`) before pushing. It runs the PR checks (fmt, validate, tflint, trivy). `.tool-versions` is the only place versions live; `mise.toml` holds tasks only. When you change a check command in `pr-checks.yml`, change `.github/scripts/check.sh` in the same PR.
 - **Documentation**: 
     - Maintain `README.md` and `AGENTS.md` in sync with all changes.
+    - Each project keeps its own README (`infra/README.md`, `apps/site/README.md`, and one per new `apps/<name>` or `packages/<name>`). Project-specific docs, runbooks and commands go there. The root `README.md` stays a short map: what the repo is, the layout, the repo-wide contribution workflow, and links to the project READMEs. Update the README of the project you change.
     - Plan documentation updates as first-class citizens in every task.
 
 ## Infrastructure Conventions
