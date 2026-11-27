@@ -14,7 +14,19 @@ skip_github="${SKIP_GITHUB:-false}"
 if [ "${GITHUB_EVENT_NAME:-}" = "pull_request" ]; then
   base="${PR_BASE_SHA:?}"
 else
-  base="${BASE_REVISION:-origin/main}"
+  # On push this is github.event.before. Diffing against origin/main would
+  # compare main with itself after a merge and select nothing.
+  base="${BASE_REVISION:-}"
+fi
+
+# A new branch (all-zero before), a missing revision, or no base at all
+# cannot be diffed, so run every unit.
+if [ "$affected" = "true" ]; then
+  if [ -z "$base" ] || [ -z "${base//0/}" ] \
+    || ! git rev-parse --verify --quiet "${base}^{commit}" >/dev/null; then
+    echo "No usable base revision (${base:-empty}); running every unit."
+    affected=false
+  fi
 fi
 
 filters=()
@@ -75,7 +87,7 @@ case "$mode" in
     ;;
 esac
 
-if grep -Eq 'Plan: ([1-9][0-9]* to add|[0-9]+ to add, [1-9]|[0-9]+ to add, [0-9]+ to change, [1-9])' "$log"; then
+if grep -Eq 'Plan: .*\b[1-9][0-9]* to (import|add|change|destroy)' "$log"; then
   echo "changes=true" >> "${GITHUB_OUTPUT:-/dev/null}"
 else
   echo "changes=false" >> "${GITHUB_OUTPUT:-/dev/null}"

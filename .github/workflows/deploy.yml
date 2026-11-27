@@ -15,19 +15,41 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: apply
-    environment: production
+  # Plan first with the read-only identity, so the approval below is for a
+  # plan that is already visible in this run (job log and artifact).
+  plan:
+    name: plan
     permissions:
       contents: read
       id-token: write
     uses: ./.github/workflows/terragrunt-run.yml
     with:
-      mode: plan-apply
+      mode: plan
+      affected: true
+      lock: false
+      base_revision: ${{ github.event.before }}
+      workload_identity_provider: ${{ vars.WIF_PLAN_PROVIDER }}
+      service_account: ${{ vars.WIF_PLAN_SERVICE_ACCOUNT }}
+      github_pages_challenge: ${{ vars.PAGES_CHALLENGE }}
+    secrets: inherit
+
+  # Waits for the production reviewer. Only this job gets an OIDC token
+  # with environment=production, which the apply identity requires.
+  apply:
+    name: apply
+    needs: plan
+    if: needs.plan.outputs.changes == 'true'
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/terragrunt-run.yml
+    with:
+      mode: apply
       affected: true
       lock: true
-      post_comment: false
+      base_revision: ${{ github.event.before }}
+      environment: production
       workload_identity_provider: ${{ vars.WIF_APPLY_PROVIDER }}
       service_account: ${{ vars.WIF_APPLY_SERVICE_ACCOUNT }}
-      github_pages_challenge: ${{ vars.GITHUB_PAGES_CHALLENGE }}
+      github_pages_challenge: ${{ vars.PAGES_CHALLENGE }}
     secrets: inherit

@@ -17,6 +17,16 @@ on:
         required: false
         type: boolean
         default: false
+      base_revision:
+        description: Revision to diff against on push events. Empty or unknown runs every unit.
+        required: false
+        type: string
+        default: ""
+      environment:
+        description: GitHub environment for the job. Empty runs without one.
+        required: false
+        type: string
+        default: ""
       workload_identity_provider:
         description: Full Workload Identity provider resource name
         required: true
@@ -31,6 +41,11 @@ on:
         type: string
         default: ""
 
+    outputs:
+      changes:
+        description: true when the plan adds, changes, destroys, or imports anything
+        value: ${{ jobs.run.outputs.changes }}
+
 permissions:
   contents: read
 
@@ -38,6 +53,9 @@ jobs:
   run:
     name: terragrunt
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    outputs:
+      changes: ${{ steps.tg.outputs.changes }}
     timeout-minutes: 30
     permissions:
       contents: read
@@ -110,7 +128,7 @@ jobs:
           LOCK: ${{ inputs.lock }}
           SKIP_GITHUB: ${{ steps.gh-token.outputs.present != 'true' }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          BASE_REVISION: origin/main
+          BASE_REVISION: ${{ inputs.base_revision }}
           GITHUB_TOKEN: ${{ steps.gh-token.outputs.token }}
           PAGES_CHALLENGE: ${{ inputs.github_pages_challenge }}
         run: bash .github/scripts/terragrunt-ci.sh
@@ -119,6 +137,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: terragrunt-plan
+          name: terragrunt-${{ inputs.mode }}
           path: .github/ci-out/plan.txt
           if-no-files-found: warn

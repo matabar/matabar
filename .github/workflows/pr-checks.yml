@@ -89,6 +89,8 @@ jobs:
       mode: plan
       affected: true
       lock: false
+      # Used on branch pushes; pull requests diff against their base SHA.
+      base_revision: origin/main
       workload_identity_provider: ${{ vars.WIF_PLAN_PROVIDER }}
       service_account: ${{ vars.WIF_PLAN_SERVICE_ACCOUNT }}
       github_pages_challenge: ${{ vars.PAGES_CHALLENGE }}

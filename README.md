@@ -166,11 +166,14 @@ Tool versions are pinned in `.tool-versions`. The `plan` check stays red until
 the `WIF_PLAN_PROVIDER` and `WIF_PLAN_SERVICE_ACCOUNT` repository variables
 exist.
 
-A push to `main` re-plans the affected units and applies them. That job uses
-the `production` environment, so it waits for the required reviewer, and it
-locks remote state. The concurrency group `production-apply` does not cancel
-an apply that is already running. It uses `WIF_APPLY_PROVIDER` and
-`WIF_APPLY_SERVICE_ACCOUNT`.
+A push to `main` runs Deploy. The `plan` job plans the units changed since
+the previous `main` commit (`github.event.before`) with the read-only
+identity, so the plan is in the run before anyone approves. When it has
+changes, the `apply` job runs in the `production` environment, waits for the
+required reviewer, locks remote state, and applies the same units with
+`WIF_APPLY_PROVIDER` and `WIF_APPLY_SERVICE_ACCOUNT`. A plan with no changes
+skips the apply. The concurrency group `production-apply` does not cancel an
+apply that is already running.
 
 ## Git Hooks
 
