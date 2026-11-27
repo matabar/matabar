@@ -23,10 +23,9 @@ jobs:
       mode: plan
       affected: false
       lock: false
-      post_comment: false
       workload_identity_provider: ${{ vars.WIF_PLAN_PROVIDER }}
       service_account: ${{ vars.WIF_PLAN_SERVICE_ACCOUNT }}
-      github_pages_challenge: ${{ vars.GITHUB_PAGES_CHALLENGE }}
+      github_pages_challenge: ${{ vars.PAGES_CHALLENGE }}
     secrets: inherit
 
   issue:
