@@ -35,25 +35,18 @@ locals {
   env = read_terragrunt_config(find_in_parent_folders("env.hcl")).locals
 }
 
-dependency "project" {
-  config_path = "../../projects/matabar-prod/project"
-  mock_outputs = {
-    project_id = "matabar-online-prod"
-  }
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
-}
-
-dependency "tfstate" {
-  config_path = "../tfstate"
-  mock_outputs = {
-    name = "matabar-prod-tfstate"
-  }
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+# Ordering only. Bootstrap units keep local state, so their outputs are not
+# readable in CI or on a fresh clone. Shared values come from env.hcl.
+dependencies {
+  paths = [
+    "../../projects/matabar-prod/project",
+    "../tfstate",
+  ]
 }
 
 inputs = {
-  project_id        = dependency.project.outputs.project_id
-  state_bucket      = dependency.tfstate.outputs.name
+  project_id        = local.env.project_id
+  state_bucket      = local.env.state_bucket
   github_repository = "matabar/personal-infra"
   github_owner      = "matabar"
 
