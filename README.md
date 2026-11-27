@@ -249,6 +249,14 @@ to GitHub, so a fresh setup starts with `false` and flips it to `true` once
 `dig matabar.online` answers from GitHub and the Pages certificate is issued.
 While it is `false`, the module passes `https_enforced` as null.
 
+Provider 6.13.0 drops the custom domain on Pages writes (it sends
+`"cname": null` when only another field changes, and ignores `cname` on
+create; see integrations/terraform-provider-github#3450), and GitHub discards
+the certificate with it. A `terraform_data` helper in the module restores the
+domain through the API after every Pages create or change and fails the apply
+if the API does not report it. It needs `curl` and the `GITHUB_TOKEN` already
+set for the unit. Drop it when a provider release always sends `cname`.
+
 Dependabot vulnerability alerts for `matabar` are a
 `github_repository_vulnerability_alerts` resource with `enabled = true`. An
 import block adopts the alerts already present on the repository. The
