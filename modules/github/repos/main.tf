@@ -65,6 +65,41 @@ resource "github_repository_pages" "this" {
   https_enforced = var.pages_https_enforced ? true : null
 }
 
+# Provider 6.13.0 (the latest release) drops the custom domain on Pages
+# writes: create ignores cname, and update sends "cname": null whenever cname
+# itself did not change (integrations/terraform-provider-github#3450). Changing
+# only https_enforced or build_type therefore unsets the domain, and GitHub
+# discards the certificate with it. This helper runs after every Pages create
+# or change, puts the domain back, and fails the apply unless the API reports
+# it. Remove it once a provider release always sends cname. It needs curl and
+# the GITHUB_TOKEN the provider already uses.
+resource "terraform_data" "pages_cname" {
+  triggers_replace = [
+    github_repository_pages.this.id,
+    var.pages_domain,
+    var.pages_https_enforced,
+    github_repository_pages.this.build_type,
+  ]
+
+  provisioner "local-exec" {
+    interpreter = ["/bin/bash", "-c"]
+    environment = {
+      PAGES_API = "https://api.github.com/repos/${github_repository.this.full_name}/pages"
+      DOMAIN    = var.pages_domain
+    }
+    command = <<-EOT
+      set -eu
+      get() { curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "$PAGES_API" | grep -o '"cname":[^,]*' || true; }
+      want="\"cname\":\"$DOMAIN\""
+      if [ "$(get)" != "$want" ]; then
+        curl -sS -X PUT -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "$PAGES_API" -d "{$want}" > /dev/null || true
+      fi
+      got="$(get)"
+      [ "$got" = "$want" ] || { echo "Pages cname is not $DOMAIN (API reports: $got)" >&2; exit 1; }
+    EOT
+  }
+}
+
 resource "github_repository_ruleset" "main" {
   name        = "protect-main"
   repository  = github_repository.this.name
