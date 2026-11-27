@@ -35,11 +35,21 @@ fi
 
 echo "Validating changed infrastructure stacks..."
 repo_root="$(git rev-parse --show-toplevel)"
+# A cache initialized with -backend=false cannot answer dependency outputs.
+find "$repo_root" -type d -name .terragrunt-cache -prune -exec rm -rf {} +
 failed=0
 for dir in $dirs; do
-  ( cd "$repo_root/$dir" && unset GIT_DIR \
-      && terragrunt init -backend=false --non-interactive \
-      && terragrunt validate --non-interactive ) || {
+  (
+    cd "$repo_root/$dir" && unset GIT_DIR
+    # Local-backend units can init for real. GCS units must not require the
+    # bucket or credentials; mocks cover missing dependency outputs.
+    if grep -q 'backend = "local"' terragrunt.hcl; then
+      terragrunt init -reconfigure --non-interactive
+    else
+      terragrunt init -backend=false -reconfigure --non-interactive
+    fi
+    terragrunt validate --non-interactive
+  ) || {
     echo "ERROR: Validation failed in $dir"
     failed=1
   }
