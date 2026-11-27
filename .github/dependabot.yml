@@ -5,28 +5,22 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - ci
 
+  # One glob covers every module, so a new module under infra/modules/<provider>/<name>
+  # is picked up without editing this file.
   - package-ecosystem: terraform
-    directory: /infra/modules/gcp/project
+    directories:
+      - /infra/modules/*/*
     schedule:
       interval: weekly
-
-  - package-ecosystem: terraform
-    directory: /infra/modules/gcp/storage-bucket
-    schedule:
-      interval: weekly
-
-  - package-ecosystem: terraform
-    directory: /infra/modules/gcp/dns-zone
-    schedule:
-      interval: weekly
-
-  - package-ecosystem: terraform
-    directory: /infra/modules/gcp/github-wif
-    schedule:
-      interval: weekly
-
-  - package-ecosystem: terraform
-    directory: /infra/modules/github/repos
-    schedule:
-      interval: weekly
+    labels:
+      - dependencies
+      - infra
+    # A provider bump that touches several modules arrives as one pull request.
+    groups:
+      terraform-providers:
+        patterns:
+          - "*"
