@@ -15,8 +15,8 @@ locals {
 
   # Paste the value GitHub shows for _github-pages-challenge-matabar after the
   # custom domain is saved. Empty omits the record. Export it as
-  # GITHUB_PAGES_CHALLENGE locally, or set that repository variable for CI.
-  github_pages_challenge = get_env("GITHUB_PAGES_CHALLENGE", "")
+  # PAGES_CHALLENGE locally, or set that repository variable for CI.
+  github_pages_challenge = get_env("PAGES_CHALLENGE", "")
 
   # https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site
   pages_records = {

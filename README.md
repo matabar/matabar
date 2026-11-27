@@ -117,7 +117,7 @@ what lets the token create `matabar.online`.
 A and AAAA addresses and points `www` at `matabar.github.io.`.
 
 The `_github-pages-challenge-matabar` TXT record is omitted until
-`GITHUB_PAGES_CHALLENGE` is set to the value GitHub shows after the custom
+`PAGES_CHALLENGE` is set to the value GitHub shows after the custom
 domain is saved. Set the same value as a GitHub repository variable before CI
 applies the zone, or a later apply will not keep the record.
 
