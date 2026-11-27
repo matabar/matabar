@@ -80,9 +80,10 @@ Do not read outputs from the local-backend units (`project`, `bootstrap/*`). The
 ## GitHub repositories
 
 `live/prod/github/repos` uses the `integrations/github` provider. The token is
-the `GITHUB_TOKEN` environment variable. Prefer a GitHub App installation
-token. A fine-grained or classic PAT in that variable also works. The token is
-not a Terraform variable and is not written to state.
+the `GITHUB_TOKEN` environment variable. Use a fine-grained PAT owned by
+`matabar`: a GitHub App installation token cannot create a repository under a
+personal account, so it can manage `matabar.online` only after it exists. The
+token is not a Terraform variable and is not written to state.
 
 The unit imports `matabar/personal-infra` (public, so rulesets and environment
 reviewers work on GitHub Free) and creates public
@@ -103,9 +104,11 @@ they started. Deployments are limited to the protected default branch.
 
 The landing page content is not in this repository.
 
-App or token permissions: Administration (read and write), Environments
-(read and write), Pages (read and write), Contents (read), Metadata (read),
-and Repository creation (read and write). A classic PAT needs the `repo` scope.
+Fine-grained PAT: resource owner `matabar`, **All repositories**, with
+repository permissions Administration (read and write), Environments (read and
+write), Pages (read and write), Contents (read and write, needed for
+`auto_init`), and Metadata (read). Administration write on all repositories is
+what lets the token create `matabar.online`.
 
 ## DNS
 
