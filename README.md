@@ -84,7 +84,8 @@ the `GITHUB_TOKEN` environment variable. Prefer a GitHub App installation
 token. A fine-grained or classic PAT in that variable also works. The token is
 not a Terraform variable and is not written to state.
 
-The unit imports `matabar/personal-infra` and creates public
+The unit imports `matabar/personal-infra` (public, so rulesets and environment
+reviewers work on GitHub Free) and creates public
 `matabar/matabar.online`. The landing repository is public so GitHub Pages is
 free. Pages uses the GitHub Actions build type and the custom domain
 `matabar.online`. `pages_https_enforced` is `false` on the first apply. GitHub
