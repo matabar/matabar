@@ -1,0 +1,21 @@
+# Tool versions live in .tool-versions only. This file defines tasks.
+
+[tasks.check]
+description = "Run the pull request checks locally (fmt, validate, tflint, trivy)"
+run = ".github/scripts/check.sh"
+
+[tasks."check:fmt"]
+description = "Formatting checks"
+run = ".github/scripts/check.sh fmt"
+
+[tasks."check:validate"]
+description = "terragrunt init -backend=false and validate across units"
+run = ".github/scripts/check.sh validate"
+
+[tasks."check:tflint"]
+description = "TFLint"
+run = ".github/scripts/check.sh tflint"
+
+[tasks."check:trivy"]
+description = "Trivy config scan"
+run = ".github/scripts/check.sh trivy"

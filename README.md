@@ -339,6 +339,16 @@ configuration or tooling plans every unit: `infra/root.hcl`, the shared
 which has no cloud credentials, posts the log on the pull request. The project, state bucket, and GitHub identity units exclude
 themselves from CI plan and apply.
 
+Run the same four checks locally, before pushing, with one command:
+
+```bash
+mise run check          # or: .github/scripts/check.sh [fmt|validate|tflint|trivy]
+```
+
+It fails at once, naming the tool, if one is missing (`mise install` installs
+all of them from `.tool-versions`) and warns when a version differs from the
+pin. `tflint --init` downloads a ruleset from the GitHub API; set `GITHUB_TOKEN` if you hit its rate limit. `.github/scripts/check.sh` mirrors `pr-checks.yml`; change both together.
+
 Tool versions are pinned in `.tool-versions`. The `plan` check stays red until
 the `WIF_PLAN_PROVIDER` and `WIF_PLAN_SERVICE_ACCOUNT` repository variables
 exist.
@@ -368,7 +378,7 @@ review from `@matabar`.
 ## Git Hooks
 
 Enable local hooks (blocks direct commits to `main`, auto-formats and re-stages
-HCL/TF, validates on push):
+HCL/TF, checks commit subjects against the scopes in `AGENTS.md`, validates on push):
 
 ```bash
 git config core.hooksPath .githooks

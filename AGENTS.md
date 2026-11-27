@@ -16,6 +16,7 @@
 - **Tooling**: Use `opentofu` and `terragrunt`.
 - **Formatting**: Mandatory `terragrunt hclfmt`.
 - **Naming**: kebab-case for resources, underscores for variables.
+- **Local checks**: Run `mise run check` (or `.github/scripts/check.sh`) before pushing. It runs the PR checks (fmt, validate, tflint, trivy). `.tool-versions` is the only place versions live; `mise.toml` holds tasks only. When you change a check command in `pr-checks.yml`, change `.github/scripts/check.sh` in the same PR.
 - **Documentation**: 
     - Maintain `README.md` and `AGENTS.md` in sync with all changes.
     - Plan documentation updates as first-class citizens in every task.
@@ -28,7 +29,7 @@
 - **Dependency mocks**: Every `dependency` block that feeds `inputs` must define `mock_outputs` for each referenced output and `mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]`. Mocks are never used on `apply`.
 - **Bootstrap outputs**: Never read `dependency.*.outputs` from a local-backend (bootstrap-tier) unit. Their state exists only on the owner's machine, so CI and `validate -backend=false` cannot read it. Take shared values (project id, state bucket) from `infra/live/prod/env.hcl` and use a `dependencies` block for ordering.
 - **Monorepo**: `matabar/matabar` holds infrastructure (`infra/`) and the static site (`apps/site/`, published by the Pages workflow on `apps/site/**`). The former `personal-infra` and `matabar.online` repositories are retired; do not recreate them. Their resources were forgotten from the GitHub unit's state (`removed` blocks, since dropped); never reuse those addresses.
-- **Repository Layout**: The root holds only repo-wide files (`.github/`, `.githooks/`, `AGENTS.md`, `README.md`, `CODEOWNERS`, `.tool-versions`, `.gitignore`, `.env.example`). Deployables live under `apps/<name>` (today `apps/site`). Infrastructure lives under `infra/` (`root.hcl`, `live/`, `modules/`, `.tflint.hcl`, `trivy.yaml`). Shared code goes under `packages/<name>`, created when the first one exists. A new project adds a directory; nothing existing moves. Terragrunt runs from `infra/`, and `get_repo_root()` paths carry the `infra/` prefix.
+- **Repository Layout**: The root holds only repo-wide files (`.github/`, `.githooks/`, `AGENTS.md`, `README.md`, `CODEOWNERS`, `.tool-versions`, `mise.toml`, `.gitignore`, `.env.example`). Deployables live under `apps/<name>` (today `apps/site`). Infrastructure lives under `infra/` (`root.hcl`, `live/`, `modules/`, `.tflint.hcl`, `trivy.yaml`). Shared code goes under `packages/<name>`, created when the first one exists. A new project adds a directory; nothing existing moves. Terragrunt runs from `infra/`, and `get_repo_root()` paths carry the `infra/` prefix.
 - **Live Layout**: Units live under `infra/live/prod/gcp/europe-west3/` (`projects/matabar-prod/` and `bootstrap/`).
 - **Secrets**: Never commit `*.tfstate`, `*.tfvars`, `.env`, PEM files, or credential JSON. There is no VM and no SSH key in this repo.
 - **Public repository**: `matabar/matabar` is public. Never commit personal data either: email addresses, home or office IPs, or anything identifying beyond the GitHub login. Commit with the GitHub noreply address.
@@ -41,6 +42,14 @@
     - **NO DIRECT COMMITS TO MAIN**: Committing directly to the `main` branch is strictly forbidden. 
     - **Enforcement**: This is enforced via a local git pre-commit hook. Run `git config core.hooksPath .githooks` to set it up. All changes must be merged via pull requests or internal branch merges following a successful plan and validation.
 - **Commits**: Strict **Conventional Commits**.
+- **Commit scopes**: One stable scope per project, so history stays greppable as projects are added. Scope is optional, but if present it must be one of:
+    - `infra`: everything under `infra/` (units, modules, state, DNS, GitHub settings).
+    - `site`: `apps/site`.
+    - `ci`: `.github/workflows`, `.github/actions`, `.github/scripts`.
+    - `deps`: dependency and tool-version bumps (`dependabot.yml`, `.tool-versions`).
+    - `repo`: repo-wide files (`AGENTS.md`, `README.md`, `.githooks/`, `CODEOWNERS`, `mise.toml`, `.gitignore`).
+    - A new `apps/<name>` or `packages/<name>` uses its directory name as scope. Do not use sub-areas such as `github`, `dns`, or `hooks`; put those in the description.
+    - Enforced by `.githooks/commit-msg`, which skips merge, revert, fixup, squash, and amend subjects. Keep it in sync with this list.
 - **Atomicity**: One logical change per commit.
 - **Worktrees**: When creating git worktrees (`/worktree`, split-to-PRs, parallel feature work):
     - Use the **git branch name** as the worktree directory name (slashes preserved).
