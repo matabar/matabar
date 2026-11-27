@@ -36,16 +36,16 @@ locals {
   }
 }
 
-dependency "project" {
-  config_path = "../../project"
-  mock_outputs = {
-    project_id = "matabar-online-prod"
-  }
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+# Ordering only. Bootstrap units keep local state, so their outputs are not
+# readable in CI or on a fresh clone. Shared values come from env.hcl.
+dependencies {
+  paths = [
+    "../../project",
+  ]
 }
 
 inputs = {
-  project_id  = dependency.project.outputs.project_id
+  project_id  = local.env.project_id
   name        = "matabar-online"
   dns_name    = "matabar.online"
   description = "Public DNS for matabar.online"

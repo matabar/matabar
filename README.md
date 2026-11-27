@@ -75,6 +75,7 @@ This lets you run `terragrunt validate` or `plan` on a stack before its dependen
 When adding a new `dependency.*.outputs.*` reference in `inputs`, add the matching key to that dependency's `mock_outputs`.
 
 Do not read outputs from the local-backend units (`project`, `bootstrap/*`). Their state lives only on the machine that applied them, so CI and `init -backend=false` cannot read it. Units take the project id and the state bucket from `live/prod/env.hcl` and list bootstrap units in a `dependencies` block for apply order only.
+
 ## DNS
 
 `dns/matabar-online` publishes a public zone for `matabar.online` with DNSSEC
