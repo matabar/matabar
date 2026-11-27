@@ -43,5 +43,5 @@ variable "production_environment" {
 variable "infra_required_checks" {
   type        = list(string)
   description = "Status check contexts required before merging to the infrastructure default branch."
-  default     = ["fmt", "validate", "tflint", "trivy", "plan"]
+  default     = ["fmt", "validate", "tflint", "trivy", "plan / terragrunt"]
 }

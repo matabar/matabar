@@ -97,7 +97,9 @@ is issued.
 
 Both default branches require a pull request, linear history (squash or
 rebase), and reject force pushes. `personal-infra` also requires the status
-checks `fmt`, `validate`, `tflint`, `trivy`, and `plan`. The production
+checks `fmt`, `validate`, `tflint`, `trivy`, and `plan / terragrunt` (the
+plan job calls a reusable workflow, so GitHub names its check
+`<caller job> / <called job>`). The production
 environment requires the GitHub user `matabar` to approve a deployment.
 `prevent_self_review` is false so the only maintainer can approve an apply
 they started. Deployments are limited to the protected default branch.
