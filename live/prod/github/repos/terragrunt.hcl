@@ -34,7 +34,7 @@ inputs = {
   repository_name        = "matabar"
   repository_description = "Monorepo: GCP foundation, DNS, GitHub config and the matabar.online site"
   pages_domain           = local.env.domain
-  pages_https_enforced   = false
+  pages_https_enforced   = true
   reviewer_username      = local.env.github_owner
   required_checks        = ["fmt", "validate", "tflint", "trivy", "plan / terragrunt"]
 }
