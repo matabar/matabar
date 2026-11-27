@@ -4,6 +4,9 @@ resource "google_project" "project" {
   billing_account = var.billing_account
   org_id          = var.org_id
   folder_id       = var.folder_id
+
+  # No default VPC with permissive firewall rules; this project runs no VMs.
+  auto_create_network = false
 }
 
 resource "google_project_service" "services" {
