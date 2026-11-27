@@ -12,6 +12,7 @@ This repository creates the GCP project and the remote state bucket. It does not
   - `modules/gcp/storage-bucket`: Versioned GCS bucket (used for Terraform state)
 - `live/`: Live infrastructure configurations.
   - `live/terragrunt.hcl`: Global Terragrunt settings
+  - `live/prod/env.hcl`: Project id, billing account, and organization parent
   - `live/prod/gcp/provider.hcl`: Generated Google provider block
   - `live/prod/gcp/europe-west3/region.hcl`: Region setting consumed by units
   - `live/prod/gcp/europe-west3/bootstrap/tfstate/`: GCS state bucket (local backend)
@@ -25,6 +26,23 @@ dependency on the bucket:
 
 - `projects/matabar-prod/project` (the project must exist before the bucket)
 - `bootstrap/tfstate` (creates the bucket itself)
+
+## Project identity
+
+`live/prod/env.hcl` is the only place that sets the project id and the billing
+account. The project module takes `billing_account` as a required input and
+does not embed an account id.
+
+The project id is `matabar-online-prod`. If Google says that id is already
+taken, change `project_id` in `env.hcl` and apply again. `org_id` and
+`folder_id` stay null so the project is created with no organization parent.
+Set exactly one of them when the Google account belongs to Cloud Identity or
+Workspace.
+
+Linking billing requires `roles/billing.user` on billing account
+`01840C-61ACE5-5FE73D`. Creating the project with no organization uses the
+identity that owns the Application Default Credentials. Inside an organization,
+that identity also needs `roles/resourcemanager.projectCreator`.
 
 ## Apply Order
 

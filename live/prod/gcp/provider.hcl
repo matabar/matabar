@@ -3,15 +3,12 @@ generate "gcp_provider" {
   if_exists = "overwrite_terragrunt"
   contents  = <<EOF
 variable "gcp_region" {
-  type    = string
-  default = "europe-west3"
+  type        = string
+  description = "Region passed to the Google provider. Individual resources may still be global."
+  default     = "europe-west3"
 }
 
 provider "google" {
-  region = var.gcp_region
-}
-
-provider "google-beta" {
   region = var.gcp_region
 }
 EOF
