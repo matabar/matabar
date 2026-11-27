@@ -16,6 +16,7 @@
 - **Tooling**: Use `opentofu` and `terragrunt`.
 - **Formatting**: Mandatory `terragrunt hclfmt`.
 - **Naming**: kebab-case for resources, underscores for variables.
+- **Local checks**: Run `mise run check` (or `.github/scripts/check.sh`) before pushing. It runs the PR checks (fmt, validate, tflint, trivy). `.tool-versions` is the only place versions live; `mise.toml` holds tasks only. When you change a check command in `pr-checks.yml`, change `.github/scripts/check.sh` in the same PR.
 - **Documentation**: 
     - Maintain `README.md` and `AGENTS.md` in sync with all changes.
     - Plan documentation updates as first-class citizens in every task.
