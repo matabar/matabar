@@ -43,12 +43,12 @@ A final `ci` job always runs. It fails when any job that ran failed or was
 cancelled, and passes when jobs were skipped. It is the one check to require:
 a new project adds its jobs to the `ci` job's `needs`.
 
-The infra jobs (`fmt`, `validate`, `tflint`, `trivy`, `plan / terragrunt`) are described in [infra/README.md](infra/README.md#plan-deploy-and-drift).
+The infra jobs (`fmt`, `validate`, `tflint`, `trivy`, `plan / terragrunt`) are described in [infra/README.md](infra/README.md#plan-deploy-and-drift). The site jobs (`site-html`, `site-links`) are described in [apps/site/README.md](apps/site/README.md#checks).
 
-Run the same four checks locally, before pushing, with one command:
+Run the checks locally, before pushing, with one command:
 
 ```bash
-mise run check          # or: .github/scripts/check.sh [fmt|validate|tflint|trivy]
+mise run check          # or: .github/scripts/check.sh [fmt|validate|tflint|trivy|site-html|site-links]
 ```
 
 It fails at once, naming the tool, if one is missing (`mise install` installs
