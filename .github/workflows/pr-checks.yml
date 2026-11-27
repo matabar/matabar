@@ -185,10 +185,9 @@ jobs:
       - name: Internal links
         run: .github/scripts/check.sh site-links
       # Advisory: external sites can be down or rate-limit CI. Retries are
-      # enabled and a failure is a warning, never a failed check.
+      # enabled and a failure is an annotated warning, never a failed check.
       - name: External links (advisory)
-        continue-on-error: true
-        run: .github/scripts/check.sh site-links-external
+        run: .github/scripts/check.sh site-links-external || echo "::warning::External link check failed; see the log above."
 
   plan:
     name: plan
