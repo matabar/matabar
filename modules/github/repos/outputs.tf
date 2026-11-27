@@ -1,26 +1,21 @@
-output "infra_repository" {
-  description = "Full name of the infrastructure repository."
-  value       = github_repository.infra.full_name
+output "repository" {
+  description = "Full name of the monorepo."
+  value       = github_repository.this.full_name
 }
 
-output "landing_repository" {
-  description = "Full name of the public landing repository."
-  value       = github_repository.landing.full_name
+output "pages_url" {
+  description = "URL GitHub Pages reports for the site."
+  value       = github_repository_pages.this.html_url
 }
 
-output "landing_pages_url" {
-  description = "URL GitHub Pages reports for the landing site."
-  value       = github_repository_pages.landing.html_url
-}
-
-output "landing_pages_cname" {
-  description = "Custom domain configured on the landing Pages site."
-  value       = github_repository_pages.landing.cname
+output "pages_cname" {
+  description = "Custom domain configured on the Pages site."
+  value       = github_repository_pages.this.cname
 }
 
 output "production_environment" {
   description = "Environment that gates apply."
-  value       = github_repository_environment.production.environment
+  value       = github_repository_environment.deploy.environment
 }
 
 output "reviewer" {

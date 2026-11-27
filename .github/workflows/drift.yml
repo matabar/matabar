@@ -66,7 +66,7 @@ jobs:
             const log = file ? fs.readFileSync(file, 'utf8') : 'Plan log was not produced.';
             const plans = [...log.matchAll(/Plan: (\d+) to add, (\d+) to change, (\d+) to destroy/g)];
             const drifted = plans.some((match) => match.slice(1).some((count) => count !== '0'));
-            const title = 'Drift detected in personal-infra';
+            const title = 'Drift detected in matabar';
             const { data } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
