@@ -1,11 +1,14 @@
-# personal-infra
+# matabar
 
-GCP foundation for personal projects, managed with OpenTofu and Terragrunt.
+Monorepo for the `matabar.online` stack: GCP foundation, DNS, GitHub configuration, and the static site, managed with OpenTofu and Terragrunt.
 
-This repository creates the GCP project, the remote state bucket, Cloud DNS for
-`matabar.online`, and the GitHub repository that serves the landing page. It
-does not run a virtual machine. The landing page content lives in
-`matabar/matabar.online`, not here.
+This repository (`matabar/matabar`) creates the GCP project, the remote state
+bucket, Cloud DNS for `matabar.online`, and the GitHub settings of this very
+repository (branch rules, the `production` environment, Pages). It also holds
+the static site in `site/`, which a workflow publishes to GitHub Pages. It does
+not run a virtual machine. It replaces the former `matabar/matabar` and
+`matabar/matabar.online` repositories; the site no longer lives in its own
+repository.
 
 This repository is public. Its history was rewritten on 2026-11-27 to drop
 author email addresses and the retired VM stack's SSH allowlist IPs; the
@@ -19,7 +22,9 @@ earlier private repository is archived as `matabar/personal-infra-archive`.
   - `modules/gcp/storage-bucket`: Versioned GCS bucket (used for Terraform state)
   - `modules/gcp/dns-zone`: Public Cloud DNS zone, DNSSEC, and record sets
   - `modules/gcp/github-wif`: Workload Identity Federation for GitHub Actions
-  - `modules/github/repos`: Landing repository, Pages, vulnerability alerts, branch rules, and the production environment
+  - `modules/github/repos`: This repository: Pages, vulnerability alerts, branch rules, and the production environment
+- `site/`: The static site served at `matabar.online`.
+- `.github/workflows/`: `pr-checks` (fmt, validate, tflint, trivy, plan), `deploy` (plan and gated apply on `main`), `drift` (daily plan), `terragrunt-run` (shared plan/apply), and `pages` (publishes `site/` to GitHub Pages on changes to `site/**`).
 - `live/`: Live infrastructure configurations.
   - `live/terragrunt.hcl`: Global Terragrunt settings
   - `live/prod/env.hcl`: Project id, billing account, and organization parent
@@ -29,7 +34,7 @@ earlier private repository is archived as `matabar/personal-infra-archive`.
   - `live/prod/gcp/europe-west3/projects/matabar-prod/project/`: GCP project (local backend, bootstrap tier)
   - `live/prod/gcp/europe-west3/bootstrap/github-wif/`: GitHub Actions identity (local backend)
   - `live/prod/gcp/europe-west3/projects/matabar-prod/dns/matabar-online/`: `matabar.online` zone
-  - `live/prod/github/repos/`: landing repository, Pages, branch rules, production environment
+  - `live/prod/github/repos/`: this repository's settings, Pages, branch rules, production environment
 
 ## State Backend
 
@@ -115,7 +120,7 @@ terragrunt --working-dir live/prod/gcp/europe-west3/projects/matabar-prod/dns/ma
 terragrunt --working-dir live/prod/github/repos init
 ```
 
-Copy the `github-wif` outputs into repository variables on `matabar/personal-infra`:
+Copy the `github-wif` outputs into repository variables on `matabar/matabar`:
 
 | Variable | Output |
 | --- | --- |
@@ -131,7 +136,7 @@ repository under a personal account. Store it as the `GH_ADMIN_TOKEN`
 Actions secret, not in git:
 
 ```bash
-gh secret set GH_ADMIN_TOKEN --repo matabar/personal-infra   # paste when prompted
+gh secret set GH_ADMIN_TOKEN --repo matabar/matabar   # paste when prompted
 ```
 
 To apply the GitHub unit locally instead, export the token for that shell only:
@@ -145,9 +150,9 @@ The run workflow still accepts GitHub App secrets (`GH_APP_ID`,
 `GH_APP_PRIVATE_KEY`) and prefers them over `GH_ADMIN_TOKEN` when set. That
 only works once `matabar.online` exists.
 
-The GitHub unit imports `personal-infra`, creates public `matabar/matabar.online`,
-turns on Actions-based Pages for `matabar.online`, protects `main`, and creates
-the `production` environment with `matabar` as the required reviewer.
+The GitHub unit imports `matabar/matabar` and its vulnerability alerts, turns
+on Actions-based Pages for `matabar.online`, protects `main`, and creates the
+`production` environment with `matabar` as the required reviewer.
 `pages_https_enforced` stays false on this first apply.
 
 Then publish the zone:
@@ -190,7 +195,7 @@ variable (Actions variables cannot start with `GITHUB_`) so CI keeps the
 record, then apply the zone (or re-run Deploy):
 
 ```bash
-gh variable set PAGES_CHALLENGE --repo matabar/personal-infra --body 'the-value-from-github'
+gh variable set PAGES_CHALLENGE --repo matabar/matabar --body 'the-value-from-github'
 export PAGES_CHALLENGE='the-value-from-github'
 terragrunt --working-dir live/prod/gcp/europe-west3/projects/matabar-prod/dns/matabar-online apply
 ```
@@ -216,7 +221,7 @@ its `apply` job in the `production` environment after reading the `plan` job.
 - Approving the `production` deployment
 - The second apply that turns on HTTPS, after the certificate is issued
 - An ImprovMX account, if email forwarding is wanted
-- The landing page files, which belong in `matabar/matabar.online`
+- Deleting the old `matabar/personal-infra` and `matabar/matabar.online` repositories, and removing the custom domain from the old Pages site first
 
 ### Terragrunt dependencies
 
@@ -235,10 +240,8 @@ the `GITHUB_TOKEN` environment variable. Use a fine-grained PAT owned by
 personal account, so it can manage `matabar.online` only after it exists. The
 token is not a Terraform variable and is not written to state.
 
-The unit imports `matabar/personal-infra` (public, so rulesets and environment
-reviewers work on GitHub Free) and creates public
-`matabar/matabar.online`. The landing repository is public so GitHub Pages is
-free. Pages uses the GitHub Actions build type and the custom domain
+The unit imports `matabar/matabar` (public, so rulesets, environment
+reviewers and GitHub Pages work on GitHub Free). Pages uses the GitHub Actions build type and the custom domain
 `matabar.online`. `pages_https_enforced` is `false` on the first apply. GitHub
 will not enforce HTTPS until the certificate is issued, which happens only
 after DNS delegates to GitHub. Set `pages_https_enforced = true` and apply
@@ -246,21 +249,25 @@ again once `dig matabar.online` answers from GitHub and the Pages certificate
 is issued. Until that second apply, the module passes `https_enforced` as
 null.
 
-Dependabot vulnerability alerts for `personal-infra` and `matabar.online`
-are `github_repository_vulnerability_alerts` resources with `enabled = true`.
-Import blocks adopt the alerts already enabled on those repositories. The
+Dependabot vulnerability alerts for `matabar` are a
+`github_repository_vulnerability_alerts` resource with `enabled = true`. An
+import block adopts the alerts already present on the repository. The
 deprecated `vulnerability_alerts` argument is not set on `github_repository`.
 
-Both default branches require a pull request, linear history (squash or
-rebase), and reject force pushes. `personal-infra` also requires the status
-checks `fmt`, `validate`, `tflint`, `trivy`, and `plan / terragrunt` (the
+`main` requires a pull request, linear history (squash or rebase), and
+rejects force pushes. It also requires the status checks `fmt`, `validate`, `tflint`, `trivy`, and `plan / terragrunt` (the
 plan job calls a reusable workflow, so GitHub names its check
 `<caller job> / <called job>`). The production
 environment requires the GitHub user `matabar` to approve a deployment.
 `prevent_self_review` is false so the only maintainer can approve an apply
 they started. Deployments are limited to the protected default branch.
 
-The landing page content is not in this repository.
+Migration from the two-repository layout: `removed` blocks with
+`destroy = false` make the unit forget the former `personal-infra` and
+`matabar.online` resources (repositories, alerts, rulesets, environment, Pages)
+without deleting anything. The old repositories are deleted by hand after the
+cutover. Do not reuse those resource addresses. Once a later apply has run
+cleanly, the `removed` blocks can be dropped.
 
 Fine-grained PAT: resource owner `matabar`, **All repositories**, with
 repository permissions Administration (read and write), Environments (read and
@@ -334,7 +341,7 @@ the Actions tab (`workflow_dispatch`), plans every unit. The concurrency group
 apply that is already running.
 
 A daily plan, also available from the Actions tab, plans every CI-managed
-unit. Drift opens or updates an issue titled `Drift detected in personal-infra`
+unit. Drift opens or updates an issue titled `Drift detected in matabar`
 and closes it when the next clean plan runs. Dependabot proposes weekly
 updates for GitHub Actions and the pinned providers. `CODEOWNERS` requests
 review from `@matabar`.

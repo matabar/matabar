@@ -27,9 +27,10 @@
 - **Apply Order**: project -> tfstate bucket -> github-wif -> dns/matabar-online and github/repos. The first three are bootstrap-tier (local state). `github-wif` is excluded from CI `plan` and `apply`. DNS and GitHub use the GCS backend and are applied by the Deploy workflow after merge. The owner applies the bootstrap tier locally; never from a cloud agent.
 - **Dependency mocks**: Every `dependency` block that feeds `inputs` must define `mock_outputs` for each referenced output and `mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]`. Mocks are never used on `apply`.
 - **Bootstrap outputs**: Never read `dependency.*.outputs` from a local-backend (bootstrap-tier) unit. Their state exists only on the owner's machine, so CI and `validate -backend=false` cannot read it. Take shared values (project id, state bucket) from `live/prod/env.hcl` and use a `dependencies` block for ordering.
+- **Monorepo**: `matabar/matabar` holds infrastructure (`live/`, `modules/`) and the static site (`site/`, published by the Pages workflow on `site/**`). The former `personal-infra` and `matabar.online` repositories are retired; do not recreate them. The GitHub unit forgets their resources through `removed` blocks (`destroy = false`); never reuse those addresses.
 - **Live Layout**: Units live under `live/prod/gcp/europe-west3/` (`projects/matabar-prod/` and `bootstrap/`).
 - **Secrets**: Never commit `*.tfstate`, `*.tfvars`, `.env`, PEM files, or credential JSON. There is no VM and no SSH key in this repo.
-- **Public repository**: `personal-infra` is public. Never commit personal data either: email addresses, home or office IPs, or anything identifying beyond the GitHub login. Commit with the GitHub noreply address.
+- **Public repository**: `matabar/matabar` is public. Never commit personal data either: email addresses, home or office IPs, or anything identifying beyond the GitHub login. Commit with the GitHub noreply address.
 
 ## Workflow & Git
 - **Branching**: 
