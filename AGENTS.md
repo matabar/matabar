@@ -49,7 +49,7 @@
     - `deps`: dependency and tool-version bumps (`dependabot.yml`, `.tool-versions`).
     - `repo`: repo-wide files (`AGENTS.md`, `README.md`, `.githooks/`, `CODEOWNERS`, `mise.toml`, `.gitignore`).
     - A new `apps/<name>` or `packages/<name>` uses its directory name as scope. Do not use sub-areas such as `github`, `dns`, or `hooks`; put those in the description.
-    - Enforced by `.githooks/commit-msg`, which skips merge, revert, fixup, and squash subjects. Keep it in sync with this list.
+    - Enforced by `.githooks/commit-msg`, which skips merge, revert, fixup, squash, and amend subjects. Keep it in sync with this list.
 - **Atomicity**: One logical change per commit.
 - **Worktrees**: When creating git worktrees (`/worktree`, split-to-PRs, parallel feature work):
     - Use the **git branch name** as the worktree directory name (slashes preserved).
