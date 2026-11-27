@@ -1,21 +1,11 @@
-variable "infra_repository_name" {
+variable "repository_name" {
   type        = string
-  description = "Existing repository to import and protect. Example: personal-infra."
+  description = "Existing monorepo to import and protect. Example: matabar."
 }
 
-variable "infra_repository_description" {
+variable "repository_description" {
   type        = string
-  description = "Description set on the infrastructure repository."
-}
-
-variable "landing_repository_name" {
-  type        = string
-  description = "Public repository that hosts the landing page. Example: matabar.online."
-}
-
-variable "landing_repository_description" {
-  type        = string
-  description = "Description set on the landing repository."
+  description = "Description set on the repository."
 }
 
 variable "pages_domain" {
@@ -40,8 +30,8 @@ variable "production_environment" {
   default     = "production"
 }
 
-variable "infra_required_checks" {
+variable "required_checks" {
   type        = list(string)
-  description = "Status check contexts required before merging to the infrastructure default branch."
+  description = "Status check contexts required before merging to the default branch."
   default     = ["fmt", "validate", "tflint", "trivy", "plan / terragrunt"]
 }

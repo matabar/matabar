@@ -31,12 +31,10 @@ dependencies {
 }
 
 inputs = {
-  infra_repository_name          = "personal-infra"
-  infra_repository_description   = "GCP foundation and DNS for matabar.online"
-  landing_repository_name        = local.env.domain
-  landing_repository_description = "Static landing page for matabar.online"
-  pages_domain                   = local.env.domain
-  pages_https_enforced           = false
-  reviewer_username              = local.env.github_owner
-  infra_required_checks          = ["fmt", "validate", "tflint", "trivy", "plan / terragrunt"]
+  repository_name        = "matabar"
+  repository_description = "Monorepo: GCP foundation, DNS, GitHub config and the matabar.online site"
+  pages_domain           = local.env.domain
+  pages_https_enforced   = false
+  reviewer_username      = local.env.github_owner
+  required_checks        = ["fmt", "validate", "tflint", "trivy", "plan / terragrunt"]
 }
