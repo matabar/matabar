@@ -36,5 +36,5 @@ inputs = {
   pages_domain           = local.env.domain
   pages_https_enforced   = true
   reviewer_username      = local.env.github_owner
-  required_checks        = ["fmt", "validate", "tflint", "trivy", "plan / terragrunt"]
+  required_checks        = ["ci"]
 }

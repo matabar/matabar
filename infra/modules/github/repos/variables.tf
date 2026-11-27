@@ -33,5 +33,5 @@ variable "production_environment" {
 variable "required_checks" {
   type        = list(string)
   description = "Status check contexts required before merging to the default branch."
-  default     = ["fmt", "validate", "tflint", "trivy", "plan / terragrunt"]
+  default     = ["ci"]
 }
