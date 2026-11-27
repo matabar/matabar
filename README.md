@@ -105,6 +105,16 @@ The first three units keep **local** state. Back up these gitignored files:
 - `live/prod/gcp/europe-west3/bootstrap/tfstate/terraform.tfstate`
 - `live/prod/gcp/europe-west3/bootstrap/github-wif/terraform.tfstate`
 
+Seed the remote state of the two CI-managed units once, with the same user
+credentials. On the first `init` the GCS backend writes a lock to create the
+empty `default.tfstate`, and the read-only plan identity cannot write, so the
+first Deploy plan fails with `storage.objects.create` denied until this runs:
+
+```bash
+terragrunt --working-dir live/prod/gcp/europe-west3/projects/matabar-prod/dns/matabar-online init
+terragrunt --working-dir live/prod/github/repos init
+```
+
 Copy the `github-wif` outputs into repository variables on `matabar/personal-infra`:
 
 | Variable | Output |
