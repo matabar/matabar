@@ -6,13 +6,13 @@ This repository (`matabar/matabar`) creates the GCP project, the remote state
 bucket, Cloud DNS for `matabar.online`, and the GitHub settings of this very
 repository (branch rules, the `production` environment, Pages). It also holds
 the static site in `site/`, which a workflow publishes to GitHub Pages. It does
-not run a virtual machine. It replaces the former `matabar/matabar` and
+not run a virtual machine. It replaces the former `matabar/personal-infra` and
 `matabar/matabar.online` repositories; the site no longer lives in its own
 repository.
 
 This repository is public. Its history was rewritten on 2026-11-27 to drop
-author email addresses and the retired VM stack's SSH allowlist IPs; the
-earlier private repository is archived as `matabar/personal-infra-archive`.
+author email addresses and the retired VM stack's SSH allowlist IPs. The
+former repositories, including the private archive, have been deleted.
 
 ## Directory Structure
 
@@ -222,7 +222,7 @@ its `apply` job in the `production` environment after reading the `plan` job.
 - Approving the `production` deployment
 - The second apply that turns on HTTPS, after the certificate is issued
 - An ImprovMX account, if email forwarding is wanted
-- Deleting the old `matabar/personal-infra` and `matabar/matabar.online` repositories, and removing the custom domain from the old Pages site first
+- Deleting the old `matabar/personal-infra` and `matabar/matabar.online` repositories (done 2026-11-27)
 
 ### Terragrunt dependencies
 
@@ -273,8 +273,8 @@ they started. Deployments are limited to the protected default branch.
 Migration from the two-repository layout: `removed` blocks with
 `destroy = false` make the unit forget the former `personal-infra` and
 `matabar.online` resources (repositories, alerts, rulesets, environment, Pages)
-without deleting anything. The old repositories are deleted by hand after the
-cutover. Do not reuse those resource addresses. Once a later apply has run
+without deleting anything. The old repositories were deleted by hand after the
+cutover (2026-11-27). Do not reuse those resource addresses. Once a later apply has run
 cleanly, the `removed` blocks can be dropped.
 
 Fine-grained PAT: resource owner `matabar`, **All repositories**, with
