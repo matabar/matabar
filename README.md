@@ -270,12 +270,11 @@ environment requires the GitHub user `matabar` to approve a deployment.
 `prevent_self_review` is false so the only maintainer can approve an apply
 they started. Deployments are limited to the protected default branch.
 
-Migration from the two-repository layout: `removed` blocks with
-`destroy = false` make the unit forget the former `personal-infra` and
+Migration from the two-repository layout: the former `personal-infra` and
 `matabar.online` resources (repositories, alerts, rulesets, environment, Pages)
-without deleting anything. The old repositories were deleted by hand after the
-cutover (2026-11-27). Do not reuse those resource addresses. Once a later apply has run
-cleanly, the `removed` blocks can be dropped.
+were forgotten from state with `removed` blocks (`destroy = false`), then the
+old repositories were deleted by hand (2026-11-27). The blocks are gone now.
+Do not recreate those repositories or reuse their resource addresses.
 
 Fine-grained PAT: resource owner `matabar`, **All repositories**, with
 repository permissions Administration (read and write), Environments (read and
