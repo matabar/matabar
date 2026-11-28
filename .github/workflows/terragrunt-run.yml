@@ -82,12 +82,7 @@ jobs:
         env:
           PROVIDER: ${{ inputs.workload_identity_provider }}
           SERVICE_ACCOUNT: ${{ inputs.service_account }}
-        run: |
-          set -euo pipefail
-          if [ -z "$PROVIDER" ] || [ -z "$SERVICE_ACCOUNT" ]; then
-            echo "Set the WIF_PLAN_* or WIF_APPLY_* repository variables from the github-wif outputs."
-            exit 1
-          fi
+        run: .github/scripts/require-workload-identity.sh
 
       - name: Setup tools
         uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
@@ -112,35 +107,18 @@ jobs:
           private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
 
-      - name: Choose GitHub token
-        id: gh-token
-        env:
-          APP_TOKEN: ${{ steps.app.outputs.token }}
-          ADMIN_TOKEN: ${{ secrets.GH_ADMIN_TOKEN }}
-        run: |
-          set -euo pipefail
-          if [ -n "${APP_TOKEN}" ]; then
-            echo "::add-mask::${APP_TOKEN}"
-            echo "present=true" >> "$GITHUB_OUTPUT"
-            echo "token=${APP_TOKEN}" >> "$GITHUB_OUTPUT"
-          elif [ -n "${ADMIN_TOKEN}" ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-            echo "token=${ADMIN_TOKEN}" >> "$GITHUB_OUTPUT"
-          else
-            echo "No GitHub App key or GH_ADMIN_TOKEN. The GitHub unit will be left out of this run."
-            echo "present=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Terragrunt
         id: tg
         env:
           MODE: ${{ inputs.mode }}
           AFFECTED: ${{ inputs.affected }}
           LOCK: ${{ inputs.lock }}
-          SKIP_GITHUB: ${{ steps.gh-token.outputs.present != 'true' }}
+          # The App token wins; GH_ADMIN_TOKEN is the fallback. With neither, the
+          # GitHub unit is left out of the run.
+          SKIP_GITHUB: ${{ steps.app.outputs.token == '' && secrets.GH_ADMIN_TOKEN == '' }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           BASE_REVISION: ${{ inputs.base_revision }}
-          GITHUB_TOKEN: ${{ steps.gh-token.outputs.token }}
+          GITHUB_TOKEN: ${{ steps.app.outputs.token || secrets.GH_ADMIN_TOKEN }}
           PAGES_CHALLENGE: ${{ inputs.github_pages_challenge }}
         run: bash .github/scripts/terragrunt-ci.sh
 

@@ -43,6 +43,7 @@ if [ "$affected" = "true" ]; then
 fi
 
 if [ "$skip_github" = "true" ]; then
+  echo "No GitHub App key or GH_ADMIN_TOKEN. The GitHub unit will be left out of this run."
   filters+=(--filter '!./live/prod/github/**')
 fi
 
