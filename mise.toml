@@ -1,7 +1,7 @@
 # Tool versions live in .tool-versions only. This file defines tasks.
 
 [tasks.check]
-description = "Run the pull request checks locally (fmt, validate, tflint, trivy)"
+description = "Run the pull request checks locally (fmt, validate, tflint, trivy, site-html, site-links)"
 run = ".github/scripts/check.sh"
 
 [tasks."check:fmt"]
@@ -19,3 +19,15 @@ run = ".github/scripts/check.sh tflint"
 [tasks."check:trivy"]
 description = "Trivy config scan"
 run = ".github/scripts/check.sh trivy"
+
+[tasks."check:site-html"]
+description = "Validate apps/site HTML (html-validate from the lockfile)"
+run = ".github/scripts/check.sh site-html"
+
+[tasks."check:site-links"]
+description = "Check apps/site internal links offline (lychee)"
+run = ".github/scripts/check.sh site-links"
+
+[tasks."check:site-links-external"]
+description = "Check apps/site external links (advisory, needs the network)"
+run = ".github/scripts/check.sh site-links-external"
