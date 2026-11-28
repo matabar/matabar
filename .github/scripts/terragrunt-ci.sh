@@ -53,7 +53,27 @@ fi
 
 mkdir -p .github/ci-out
 log=.github/ci-out/plan.txt
+markdown=.github/ci-out/plan.md
 : > "$log"
+
+# Render the log as Markdown for the pull request comment and the drift issue,
+# on every exit so a failed run is reported too. GitHub rejects bodies over
+# 65536 characters, so the log is cut at 60000 bytes.
+render_markdown() {
+  local max=60000
+  {
+    printf '## Terragrunt %s\n\nRun: %s/%s/actions/runs/%s\n\n```\n' \
+      "$mode" "${GITHUB_SERVER_URL:-}" "${GITHUB_REPOSITORY:-}" "${GITHUB_RUN_ID:-}"
+    if [ "$(wc -c < "$log")" -gt "$max" ]; then
+      head -c "$max" "$log"
+      printf '\n\n… truncated …'
+    else
+      cat "$log"
+    fi
+    printf '\n```\n'
+  } > "$markdown"
+}
+trap render_markdown EXIT
 
 echo "Terragrunt filters: ${filters[*]:-<all units>}" | tee -a "$log"
 

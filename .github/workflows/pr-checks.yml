@@ -246,44 +246,21 @@ jobs:
           name: terragrunt-plan
           path: plan-log
 
+      # plan.md is rendered by terragrunt-ci.sh: the plan log in a code block,
+      # cut at the size limit. The comment is updated in place by its header.
       - name: Comment on the pull request
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        if: hashFiles('plan-log/plan.md') != ''
+        uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
         with:
-          script: |
-            const fs = require('fs');
-            const marker = '<!-- terragrunt-plan -->';
-            let body = '';
-            try {
-              body = fs.readFileSync('plan-log/plan.txt', 'utf8');
-            } catch (error) {
-              body = 'Plan log was not produced.';
-            }
-            const max = 60000;
-            if (body.length > max) {
-              body = body.slice(0, max) + '\n\n… truncated …';
-            }
-            const comment = `${marker}\n## Terragrunt plan\n\n\`\`\`\n${body}\n\`\`\``;
-            const comments = await github.paginate(github.rest.issues.listComments, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-            const existing = comments.find((entry) => entry.user.type === 'Bot' && entry.body.includes(marker));
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existing.id,
-                body: comment,
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: comment,
-              });
-            }
+          header: terragrunt-plan
+          path: plan-log/plan.md
+
+      - name: Comment that no plan was produced
+        if: hashFiles('plan-log/plan.md') == ''
+        uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
+        with:
+          header: terragrunt-plan
+          message: Plan log was not produced.
 
   # The single check to require. It always runs and fails when any job that
   # ran failed or was cancelled. Skipped jobs are fine. Add new jobs to needs.
