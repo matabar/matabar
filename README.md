@@ -82,3 +82,4 @@ This repository follows strict conventions for AI agents as defined in [AGENTS.m
 - **One Concern Per PR**: Stack dependent pull requests; do not bundle unrelated changes.
 - **Phased Planning**: Every non-trivial task requires a phased plan.
 - **Conventional Commits**: Strict adherence to commit message standards.
+ 
