@@ -3,6 +3,8 @@ scan:
     - "**/.terragrunt-cache"
     - "**/.terraform"
     - .github/ci-out
+    - "**/node_modules"
+    - .nx
 exit-code: 1
 severity:
   - HIGH
