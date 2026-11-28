@@ -1,0 +1,9 @@
+{
+  "name": "matabar",
+  "private": true,
+  "description": "Workspace tooling for the matabar monorepo. Install with npm ci.",
+  "devDependencies": {
+    "html-validate": "11.23.0",
+    "nx": "24.1.0"
+  }
+}

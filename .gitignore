@@ -36,3 +36,11 @@ Thumbs.db
 
 # Site check tooling (npm ci)
 node_modules/
+
+# Nx
+.nx/cache
+.nx/workspace-data
+.nx/polygraph
+
+.claude/worktrees
+.claude/settings.local.json

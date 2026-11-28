@@ -1,0 +1,32 @@
+{
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "neverConnectToCloud": true,
+  "analytics": false,
+  "defaultBase": "main",
+  "namedInputs": {
+    "toolVersions": [
+      "{workspaceRoot}/.tool-versions"
+    ],
+    "ciConfig": [
+      "{workspaceRoot}/.github/workflows/**/*",
+      "{workspaceRoot}/.github/actions/**/*",
+      "{workspaceRoot}/.github/scripts/**/*",
+      "{workspaceRoot}/.github/dependabot.yml"
+    ],
+    "default": [
+      "{projectRoot}/**/*",
+      "toolVersions",
+      "ciConfig",
+      "{workspaceRoot}/nx.json"
+    ],
+    "nodeTooling": [
+      "{workspaceRoot}/package.json",
+      "{workspaceRoot}/package-lock.json"
+    ]
+  },
+  "targetDefaults": {
+    "*": {
+      "cache": false
+    }
+  }
+}
