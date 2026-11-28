@@ -1,12 +1,16 @@
 name: Setup Nx
 description: >-
-  Installs the pinned tools with mise, installs Nx from the lockfile and sets
+  Installs the tools pinned in a directory (and its parents)
+  with mise, installs Nx from the lockfile and sets
   NX_BASE and NX_HEAD for `nx affected`. Run actions/checkout with
   fetch-depth: 0 first. Callers need `actions: read` for branch pushes.
 inputs:
-  tools:
-    description: Space-separated tools from .tool-versions to install. node is always needed.
-    required: true
+  working_directory:
+    description: >-
+      Directory whose pins to install: the project that uses the tools. mise
+      also reads the parents, so the root pin (node) is always included.
+    required: false
+    default: .
 runs:
   using: composite
   steps:
@@ -14,7 +18,7 @@ runs:
       uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
       with:
         version: 2026.11.14
-        install_args: ${{ inputs.tools }}
+        working_directory: ${{ inputs.working_directory }}
         # Some jobs run with cloud credentials: no shared cache.
         cache: false
     - name: Install Nx

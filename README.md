@@ -8,7 +8,7 @@ commit personal data.
 
 ## Layout
 
-The root holds only repo-wide files (`.github/`, `AGENTS.md`, `README.md`, `CODEOWNERS`, `.tool-versions`, `mise.toml`, `package.json`, `package-lock.json`, `nx.json`, `CLAUDE.md`, `.gitignore`, `.env.example`). Each project lives in its own directory and keeps its own README; this file stays a map.
+The root holds only repo-wide files (`.github/`, `AGENTS.md`, `README.md`, `CODEOWNERS`, `.tool-versions` (node only), `mise.toml`, `package.json`, `package-lock.json`, `nx.json`, `CLAUDE.md`, `.gitignore`, `.env.example`). Each project lives in its own directory and keeps its own README; this file stays a map.
 
 | Path | Project | Docs |
 | --- | --- | --- |
@@ -27,14 +27,14 @@ Future deployables go under `apps/<name>` and shared code under `packages/<name>
 
 ## Nx and pull request checks
 
-[Nx](https://nx.dev) (pinned in `package.json`, installed with `npm ci`) is the monorepo tool. Each project has a `project.json` that declares its checks as targets with their inputs; `nx.json` holds the shared named inputs (`.tool-versions`, CI config, `nx.json`). Nx Cloud is never connected (`neverConnectToCloud`); caching is local only (`.nx/`, gitignored).
+[Nx](https://nx.dev) (pinned in `package.json`, installed with `npm ci`) is the monorepo tool. Each project has a `project.json` that declares its checks as targets with their inputs; `nx.json` holds the shared named inputs (root `.tool-versions`, CI config, `nx.json`). Nx Cloud is never connected (`neverConnectToCloud`); caching is local only (`.nx/`, gitignored).
 
 | Project | Targets | Tags |
 | --- | --- | --- |
 | `infra` | `fmt`, `validate`, `tflint`, `trivy` | `type:infra`, `scope:platform` |
 | `site` | `html`, `links`, `links-external` (advisory, needs the network) | `type:app`, `scope:site` |
 
-**Affected detection.** A project is affected when a changed file is in its root, or is a shared input: `.tool-versions`, `.github/workflows`, `.github/actions`, `.github/scripts`, `.github/dependabot.yml`, `nx.json`, and (for `site`) `package.json`. A change to `package-lock.json` affects every project (Nx treats any lockfile change that way). Other paths, such as the root docs, affect none. `.tool-versions` counts as an input of every project until per-project tool pins land.
+**Affected detection.** A project is affected when a changed file is in its root, or is a shared input: the root `.tool-versions` (node), `.github/workflows`, `.github/actions`, `.github/scripts`, `.github/dependabot.yml`, `nx.json`, and (for `site`) `package.json`. A change to `package-lock.json` affects every project (Nx treats any lockfile change that way). Other paths, such as the root docs, affect none. Each project pins its own tools inside its root (`infra/.tool-versions`, `apps/site/.tool-versions`), so bumping an infra tool affects only `infra`, a site tool only `site`, and node (root pin) both.
 
 Every pull request, and every push that is not to `main`, starts with a `changes` job: it runs `nx show projects --affected` and the other jobs read the result. `nrwl/nx-set-shas` supplies the base: on a pull request the merge base with the target branch; on a branch push `origin/main` (this workflow never runs on `main`, so there is no earlier successful run to find). Each check is its own job (`fmt`, `validate`, `tflint`, `trivy`, `html`, `links`) running `nx affected -t <target>`, so a failure shows under its own name and unaffected jobs are skipped. A final `ci` job always runs (`re-actors/alls-green`). It fails when any job that ran failed or was cancelled, and passes when the listed jobs were skipped. It is the one check to require: a new check job is added to its `needs`.
 
@@ -43,19 +43,19 @@ The infra jobs (and `plan / terragrunt`) are described in [infra/README.md](infr
 Run the checks locally, before pushing:
 
 ```bash
-mise install                                   # tools from .tool-versions
+mise run install                               # every pinned tool (mise install in each project) and Nx
 mise run check                                 # affected projects only (nx affected)
 mise run check:all                             # every check on every project
 npx nx run infra:fmt                           # one target
 npx nx graph --file=graph.html                 # project graph
 ```
 
-A missing tool fails its target with "command not found"; `mise install` installs them all. `tflint --init` downloads a ruleset from the GitHub API; set `GITHUB_TOKEN` if you hit its rate limit. CI installs the tools with `jdx/mise-action` and Nx with `npm ci`. Tool versions are in `.tool-versions`; Nx and html-validate are pinned by `package-lock.json`, and Dependabot bumps them.
+mise resolves tools from the directory a command runs in, so the `mise run` tasks run each project's checks from its own directory with `mise exec`; to run `npx nx` by hand, do it from the project directory (or activate mise there). A missing tool fails its target with "command not found"; `mise run install` installs them all (mise reads the config of the directory it runs in and its parents, so a plain `mise install` at the root installs node only; `cd infra && mise install` installs node and the infra tools). `tflint --init` downloads a ruleset from the GitHub API; set `GITHUB_TOKEN` if you hit its rate limit. CI installs the tools with `jdx/mise-action` (`working_directory` set to the project, so it installs exactly what that directory and the root pin) and Nx with `npm ci`. Tool versions: node in the root `.tool-versions`, opentofu, terragrunt, tflint and trivy in `infra/.tool-versions`, lychee in `apps/site/.tool-versions`; to bump one, edit its line and nothing else; Nx and html-validate are pinned by `package-lock.json`, and Dependabot bumps them.
 
 ## Adding a project
 
 1. Create `apps/<name>` (deployable) or `packages/<name>` (shared code) with a `project.json`: `name`, `projectType`, `tags` (`type:app` or `type:package`, plus `scope:<name>`), and a target per check with `inputs` (start from `default`; add `{ "runtime": "<tool> --version" }` for tool versions). Mark deterministic targets `"cache": true`; the default is off. Use `nx:run-commands` for the commands.
-2. Add the tools it needs to `.tool-versions`, give it a README, and add a commit scope (its directory name) to `AGENTS.md` and to the `scopes` input of the `title` job in `.github/workflows/pr-checks.yml`.
+2. Pin the tools it needs in its own `.tool-versions` (the root one holds node only), give it a README, and add a commit scope (its directory name) to `AGENTS.md` and to the `scopes` input of the `title` job in `.github/workflows/pr-checks.yml`.
 3. If it adds a check target that no job runs, add a job to `pr-checks.yml` that runs `nx affected -t <target>`, and list it in `ci`'s `needs` and `allowed-skips`. Targets that already have a job (for example `fmt`) run for the new project with no workflow change.
 4. `nx show projects` should list it; `nx graph` should show it.
 

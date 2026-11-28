@@ -70,7 +70,7 @@ the merge is not blocked by the new required checks. The deploy workflow on
 `main` fails until the steps below are done; re-run it at the end.
 
 Install OpenTofu 1.13.10, Terragrunt 1.2.3, TFLint 0.66.0, and Trivy 0.76.2
-(`mise install` reads `.tool-versions`). Install the pre-commit hook (see the root README, "Git hook"). Then:
+(`mise run install` from the repository root, or `mise install` in `infra/`, reads `infra/.tool-versions`). Install the pre-commit hook (see the root README, "Git hook"). Then:
 
 ```bash
 gcloud auth login
@@ -332,7 +332,7 @@ lock. `plan` uses Workload Identity and does not lock state.
 **Unit selection** is Terragrunt's own Git filter, set by the workflow as `TG_FILTER=...[<base>...HEAD]`: the units that changed between the base revision and `HEAD`, plus the units that depend on them. The base is the pull request base SHA, `origin/main` on a branch push, and `github.event.before` on `main`. A unit counts as changed when its own files change or a file it reads changes (Terragrunt tracks reads: `root.hcl`, `env.hcl`, `region.hcl`, `provider.hcl`, and the files of a local module it sources). Nothing script-side computes this. An unknown base revision fails the run instead of silently planning nothing. On a branch push behind `main` the diff is two-dot, so it can also select units that only `main` changed (plan only; pull requests and Deploy are exact). Because the filter is Git-based, Terragrunt runs each selected unit once, in a temporary Git worktree of `HEAD`; state prefixes (`path_relative_to_include()`) and `get_repo_root()` resolve there exactly as in a normal checkout.
 
 - A change under `infra/` that no unit reads selects no unit, and the plan is empty.
-- A change to CI tooling (`.github/scripts/`, the workflows) or to `.tool-versions` selects no unit either, so a tool bump PR shows an empty plan. This is deliberate: the `validate` job runs on every unit when a tool version changes (Nx marks `infra` affected; it checks the configuration with `-backend=false`, it is not a plan), and the daily drift plan plans every unit and opens an issue if a tool or workflow change altered a plan. Run the Deploy or Drift workflow from the Actions tab for an immediate full plan.
+- A change to CI tooling (`.github/scripts/`, the workflows) or to `infra/.tool-versions` selects no unit either, so a tool bump PR shows an empty plan. This is deliberate: the `validate` job runs on every unit when an infra tool version changes (Nx marks `infra` affected, and only `infra`; it checks the configuration with `-backend=false`, it is not a plan), and the daily drift plan plans every unit and opens an issue if a tool or workflow change altered a plan. Run the Deploy or Drift workflow from the Actions tab for an immediate full plan.
 - A unit deleted in the range is **not** planned or applied: Terragrunt excludes it unless `--filter-allow-destroy` is given, and CI never passes that flag. Destroying a removed unit stays a deliberate manual step.
 - The three bootstrap units exclude themselves when `CI=true` (local state). The GitHub unit excludes itself when `GITHUB_TOKEN` is empty, which is the case when neither the GitHub App nor `GH_ADMIN_TOKEN` is configured; the workflow sets `GITHUB_TOKEN` to the App token or the PAT.
 - `terragrunt-ci.sh` is the only custom code left. It runs `terragrunt run --all`, sets the `changes` output by searching the log for `Plan: N to ...`, and renders `plan.md`. The run report has per-unit results but no "has changes" field, and `-detailed-exitcode` cannot be used: the aggregate exit code is 2 even when another unit failed with 1, which would hide the failure.
@@ -342,7 +342,7 @@ credentials, posts the log on the pull request with `marocchino/sticky-pull-requ
 The project, state bucket, and GitHub identity units exclude themselves from CI
 plan and apply.
 
-Tool versions are pinned in `.tool-versions`. The `plan` check stays red until
+Tool versions are pinned in `infra/.tool-versions` (opentofu, terragrunt, tflint, trivy; node comes from the root `.tool-versions`). To bump one, edit its line there. CI installs them with `jdx/mise-action` and `working_directory: infra`. The `plan` check stays red until
 the `WIF_PLAN_PROVIDER` and `WIF_PLAN_SERVICE_ACCOUNT` repository variables
 exist.
 

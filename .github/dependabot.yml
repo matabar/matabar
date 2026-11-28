@@ -27,7 +27,7 @@ updates:
 
   # Nx and html-validate, pinned with their dependencies in the root
   # package-lock.json. A lockfile change affects every project. node, lychee
-  # and the infra tools are pinned in .tool-versions, which no Dependabot
+  # and the infra tools are pinned in .tool-versions files, which no Dependabot
   # ecosystem reads.
   - package-ecosystem: npm
     directory: /
