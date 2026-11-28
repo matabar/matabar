@@ -18,7 +18,7 @@ files="$(git diff --name-only "${base}...HEAD")"
 # the tooling and workflows that run Terragrunt.
 # infra/.tflint.hcl and infra/trivy.yaml are left out on purpose: they only
 # configure lint and scan jobs and cannot change a plan.
-shared='^(infra/(root\.hcl|live/terragrunt\.hcl|live/prod/env\.hcl|live/prod/gcp/provider\.hcl|live/prod/gcp/europe-west3/region\.hcl)|\.github/(actions/setup-tools|scripts)/.*|\.github/workflows/(terragrunt-run|deploy|pr-checks|drift)\.yml)$'
+shared='^(infra/(root\.hcl|live/terragrunt\.hcl|live/prod/env\.hcl|live/prod/gcp/provider\.hcl|live/prod/gcp/europe-west3/region\.hcl)|\.github/scripts/.*|\.github/workflows/(terragrunt-run|deploy|pr-checks|drift)\.yml)$'
 if printf '%s\n' "$files" | grep -Eq "$shared"; then
   echo ALL
   exit 0

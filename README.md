@@ -33,7 +33,7 @@ base, or `main` on a branch push) to projects:
 
 | Project | Affected by changes under |
 | --- | --- |
-| `infra` | `infra/`, `.github/` (except `.github/site-checks/` and `.github/actions/setup-lychee/`), and `.tool-versions` lines for opentofu, terragrunt, tflint, trivy |
+| `infra` | `infra/`, `.github/` (except `.github/site-checks/`), and `.tool-versions` lines for opentofu, terragrunt, tflint, trivy |
 | `site` | `apps/site/`, `.github/`, and `.tool-versions` lines for node, lychee |
 
 Shared CI and tooling files affect every project. `.tool-versions` is compared
@@ -42,8 +42,8 @@ does not plan infra units and bumping an infra tool does not run the site jobs. 
 tool missing from that script's lists counts for both projects. Other paths, such
 as docs, affect none.
 
-A final `ci` job always runs. It fails when any job that ran failed or was
-cancelled, and passes when jobs were skipped. It is the one check to require:
+A final `ci` job always runs (`re-actors/alls-green`). It fails when any job that ran failed or was
+cancelled, and passes when the listed jobs were skipped. It is the one check to require:
 a new project adds its jobs to the `ci` job's `needs`.
 
 The infra jobs (`fmt`, `validate`, `tflint`, `trivy`, `plan / terragrunt`) are described in [infra/README.md](infra/README.md#plan-deploy-and-drift). The site jobs (`site-html`, `site-links`) are described in [apps/site/README.md](apps/site/README.md#checks).
@@ -56,7 +56,7 @@ mise run check          # also check:site-html, check:site-links; or: .github/sc
 
 It fails at once, naming the tool, if one is missing (`mise install` installs
 all of them from `.tool-versions`) and warns when a version differs from the
-pin. `tflint --init` downloads a ruleset from the GitHub API; set `GITHUB_TOKEN` if you hit its rate limit. Each job in `pr-checks.yml` runs `.github/scripts/check.sh <step>`, so CI and the local command are one definition; change a check in the script. In CI, a tool that is not the pinned version fails the job; locally it only warns. Tool versions are pinned in `.tool-versions`; the site's npm tooling (html-validate) is pinned by the lockfile in `.github/site-checks/` and installed with `npm ci`.
+pin. `tflint --init` downloads a ruleset from the GitHub API; set `GITHUB_TOKEN` if you hit its rate limit. CI installs the tools from `.tool-versions` with `jdx/mise-action`. Each job in `pr-checks.yml` runs `.github/scripts/check.sh <step>`, so CI and the local command are one definition; change a check in the script. In CI, a tool that is not the pinned version fails the job; locally it only warns. Tool versions are pinned in `.tool-versions`; the site's npm tooling (html-validate) is pinned by the lockfile in `.github/site-checks/` and installed with `npm ci`.
 
 ## Git Hooks
 

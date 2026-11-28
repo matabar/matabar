@@ -23,50 +23,50 @@ jobs:
     permissions:
       contents: read
     outputs:
-      infra: ${{ steps.filter.outputs.infra }}
-      site: ${{ steps.filter.outputs.site }}
+      infra: ${{ steps.filter.outputs.infra == 'true' || steps.tools-infra.outputs.infra == 'true' }}
+      site: ${{ steps.filter.outputs.site == 'true' || steps.tools-site.outputs.site == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+      # Empty token: diff with git against the base branch instead of the API,
+      # so the job needs no pull-requests scope. Pull requests diff against their
+      # base branch, branch pushes against main.
       - name: Detect affected projects
         id: filter
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          token: ""
+          base: ${{ github.base_ref || 'main' }}
+          # .github/ affects every project, except .github/site-checks/, which
+          # cannot change infra checks or plans. .tool-versions is handled below.
+          filters: |
+            infra:
+              - 'infra/**'
+              - '.github/*'
+              - '.github/!(site-checks)/**'
+            site:
+              - 'apps/site/**'
+              - '.github/**'
+            tools:
+              - '.tool-versions'
+      # .tool-versions is compared line by line: a site tool bump (node, lychee)
+      # skips infra and an infra tool bump (opentofu, terragrunt, tflint,
+      # trivy) skips site. paths-filter cannot compare lines.
+      - name: Compare infra tool versions
+        id: tools-infra
+        if: steps.filter.outputs.tools == 'true'
         env:
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: |
-          set -euo pipefail
-          if [ -n "$PR_BASE_SHA" ]; then
-            base="$PR_BASE_SHA"
-          else
-            git fetch --no-tags origin main
-            base="origin/main"
-          fi
-          files="$(git -c core.quotePath=false diff --name-only --no-renames "${base}...HEAD")"
-          echo "Changed files:"
-          printf '%s\n' "$files"
-          infra=false
-          site=false
-          # .github/ affects every project, except the site-only tooling paths
-          # (site-checks, setup-lychee), which cannot change infra checks or plans.
-          # .tool-versions is compared line by line: a site tool bump (node,
-          # lychee) skips infra and an infra tool bump (opentofu, terragrunt,
-          # tflint, trivy) skips site.
-          infra_files="$(printf '%s\n' "$files" | grep -Ev '^\.github/(site-checks/|actions/setup-lychee/)' || true)"
-          tool_files="$(printf '%s\n' "$files" | grep -x '\.tool-versions' || true)"
-          if printf '%s\n' "$infra_files" | grep -Eq '^(infra/|\.github/)'; then
-            infra=true
-          fi
-          if printf '%s\n' "$files" | grep -Eq '^(apps/site/|\.github/)'; then
-            site=true
-          fi
-          if [ -n "$tool_files" ]; then
-            .github/scripts/tool-versions-changed.sh "$base" infra && infra=true
-            .github/scripts/tool-versions-changed.sh "$base" site && site=true
-          fi
-          echo "infra=${infra}" >> "$GITHUB_OUTPUT"
-          echo "site=${site}" >> "$GITHUB_OUTPUT"
-          echo "infra=${infra} site=${site}"
+          BASE: ${{ github.event.pull_request.base.sha || 'origin/main' }}
+        run: .github/scripts/tool-versions-changed.sh "$BASE" infra output
+      - name: Compare site tool versions
+        id: tools-site
+        if: steps.filter.outputs.tools == 'true'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || 'origin/main' }}
+        run: .github/scripts/tool-versions-changed.sh "$BASE" site output
+
   fmt:
     name: fmt
     needs: changes
@@ -79,7 +79,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup tools
-        uses: ./.github/actions/setup-tools
+        uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
+        with:
+          version: 2026.11.14
+          install_args: opentofu terragrunt tflint trivy
+          # These tools run with cloud credentials in some jobs: no shared cache.
+          cache: false
       - name: Format check
         run: .github/scripts/check.sh fmt
 
@@ -95,7 +100,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup tools
-        uses: ./.github/actions/setup-tools
+        uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
+        with:
+          version: 2026.11.14
+          install_args: opentofu terragrunt tflint trivy
+          # These tools run with cloud credentials in some jobs: no shared cache.
+          cache: false
       - name: Init and validate
         run: .github/scripts/check.sh validate
 
@@ -111,7 +121,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup tools
-        uses: ./.github/actions/setup-tools
+        uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
+        with:
+          version: 2026.11.14
+          install_args: opentofu terragrunt tflint trivy
+          # These tools run with cloud credentials in some jobs: no shared cache.
+          cache: false
       - name: TFLint
         env:
           # tflint --init downloads the google ruleset from the GitHub API.
@@ -131,7 +146,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup tools
-        uses: ./.github/actions/setup-tools
+        uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
+        with:
+          version: 2026.11.14
+          install_args: opentofu terragrunt tflint trivy
+          # These tools run with cloud credentials in some jobs: no shared cache.
+          cache: false
       - name: Trivy config
         run: .github/scripts/check.sh trivy
 
@@ -166,15 +186,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install lychee
-        uses: ./.github/actions/setup-lychee
+        uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
+        with:
+          version: 2026.11.14
+          install_args: lychee
+          # These tools run with cloud credentials in some jobs: no shared cache.
+          cache: false
       # Strict: broken internal links and fragments fail the check. Offline, so
       # it cannot flake on the network.
       - name: Internal links
         run: .github/scripts/check.sh site-links
       # Advisory: external sites can be down or rate-limit CI. Retries are
-      # enabled and a failure is an annotated warning, never a failed check.
+      # enabled and a failure never fails the job (it shows on the step).
       - name: External links (advisory)
-        run: .github/scripts/check.sh site-links-external || echo "::warning::External link check failed; see the log above."
+        continue-on-error: true
+        run: .github/scripts/check.sh site-links-external
 
   plan:
     name: plan
@@ -221,44 +247,21 @@ jobs:
           name: terragrunt-plan
           path: plan-log
 
+      # plan.md is rendered by terragrunt-ci.sh: the plan log in a code block,
+      # cut at the size limit. The comment is updated in place by its header.
       - name: Comment on the pull request
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        if: hashFiles('plan-log/plan.md') != ''
+        uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
         with:
-          script: |
-            const fs = require('fs');
-            const marker = '<!-- terragrunt-plan -->';
-            let body = '';
-            try {
-              body = fs.readFileSync('plan-log/plan.txt', 'utf8');
-            } catch (error) {
-              body = 'Plan log was not produced.';
-            }
-            const max = 60000;
-            if (body.length > max) {
-              body = body.slice(0, max) + '\n\n… truncated …';
-            }
-            const comment = `${marker}\n## Terragrunt plan\n\n\`\`\`\n${body}\n\`\`\``;
-            const comments = await github.paginate(github.rest.issues.listComments, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-            const existing = comments.find((entry) => entry.user.type === 'Bot' && entry.body.includes(marker));
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existing.id,
-                body: comment,
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: comment,
-              });
-            }
+          header: terragrunt-plan
+          path: plan-log/plan.md
+
+      - name: Comment that no plan was produced
+        if: hashFiles('plan-log/plan.md') == ''
+        uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
+        with:
+          header: terragrunt-plan
+          message: Plan log was not produced.
 
   # The single check to require. It always runs and fails when any job that
   # ran failed or was cancelled. Skipped jobs are fine. Add new jobs to needs.
@@ -270,11 +273,10 @@ jobs:
     timeout-minutes: 5
     permissions: {}
     steps:
+      # Fails when a job failed or was cancelled. Only the listed jobs may be
+      # skipped; `changes` must run.
       - name: Require every job that ran to pass
-        env:
-          RESULTS: ${{ join(needs.*.result, ' ') }}
-        run: |
-          echo "Job results: ${RESULTS}"
-          case " ${RESULTS} " in
-            *" failure "*|*" cancelled "*) echo "A job failed or was cancelled."; exit 1 ;;
-          esac
+        uses: re-actors/alls-green@b5b5b37504aa4183270bd3d855c52a67f212be35 # v1.3.0
+        with:
+          jobs: ${{ toJSON(needs) }}
+          allowed-skips: fmt, validate, tflint, trivy, site-html, site-links, plan, plan-comment
