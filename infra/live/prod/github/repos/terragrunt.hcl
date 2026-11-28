@@ -18,6 +18,15 @@ generate "github_provider" {
   EOF
 }
 
+# The provider needs a token. CI sets GITHUB_TOKEN to an App installation token
+# or GH_ADMIN_TOKEN; with neither, the unit is left out of the run. Single-unit
+# runs are not blocked, so a local `terragrunt plan` without a token still
+# fails loudly instead of skipping.
+exclude {
+  if      = get_env("GITHUB_TOKEN", "") == ""
+  actions = ["all"]
+}
+
 terraform {
   source = "${get_repo_root()}/infra/modules/github/repos"
 }

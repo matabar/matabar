@@ -9,7 +9,7 @@ on:
         type: boolean
         default: true
       mode:
-        description: plan, apply, or plan-apply
+        description: plan or apply
         required: true
         type: string
       affected:
@@ -23,7 +23,7 @@ on:
         type: boolean
         default: false
       base_revision:
-        description: Revision to diff against on push events. Empty or unknown runs every unit.
+        description: Revision to diff against when the event is not a pull request. Required when affected is true; an unknown revision fails the run.
         required: false
         type: string
         default: ""
@@ -111,16 +111,20 @@ jobs:
         id: tg
         env:
           MODE: ${{ inputs.mode }}
-          AFFECTED: ${{ inputs.affected }}
-          LOCK: ${{ inputs.lock }}
-          # The App token wins; GH_ADMIN_TOKEN is the fallback. With neither, the
-          # GitHub unit is left out of the run.
-          SKIP_GITHUB: ${{ steps.app.outputs.token == '' && secrets.GH_ADMIN_TOKEN == '' }}
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          BASE_REVISION: ${{ inputs.base_revision }}
+          # Terragrunt's own configuration. TG_FILTER selects the units that
+          # changed since the base revision, plus their dependents; empty runs
+          # every unit. Pull requests diff against their base SHA, other events
+          # against base_revision.
+          TG_FILTER: ${{ inputs.affected && format('...[{0}...HEAD]', github.event.pull_request.base.sha || inputs.base_revision) || '' }}
+          TG_NON_INTERACTIVE: "true"
+          TG_NO_COLOR: "true"
+          TF_INPUT: "false"
+          TF_CLI_ARGS_plan: ${{ !inputs.lock && '-lock=false' || '' }}
+          # The App token wins; GH_ADMIN_TOKEN is the fallback. With neither
+          # the variable is empty and the GitHub unit excludes itself.
           GITHUB_TOKEN: ${{ steps.app.outputs.token || secrets.GH_ADMIN_TOKEN }}
           PAGES_CHALLENGE: ${{ inputs.github_pages_challenge }}
-        run: bash .github/scripts/terragrunt-ci.sh
+        run: .github/scripts/terragrunt-ci.sh
 
       - name: Upload plan log
         if: always()

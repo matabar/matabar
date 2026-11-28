@@ -6,7 +6,7 @@ on:
       - main
   # Full run of every CI-managed unit, e.g. after bootstrap or when a unit
   # landed on main before this workflow existed. There is no diff base, so
-  # every unit is planned.
+  # every unit is planned (affected is false for this event).
   workflow_dispatch:
 
 permissions:
@@ -29,7 +29,7 @@ jobs:
     uses: ./.github/workflows/terragrunt-run.yml
     with:
       mode: plan
-      affected: true
+      affected: ${{ github.event_name == 'push' }}
       lock: false
       base_revision: ${{ github.event.before }}
       workload_identity_provider: ${{ vars.WIF_PLAN_PROVIDER }}
@@ -49,7 +49,7 @@ jobs:
     uses: ./.github/workflows/terragrunt-run.yml
     with:
       mode: apply
-      affected: true
+      affected: ${{ github.event_name == 'push' }}
       lock: true
       base_revision: ${{ github.event.before }}
       environment: production
