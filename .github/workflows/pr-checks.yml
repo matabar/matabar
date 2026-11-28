@@ -294,11 +294,10 @@ jobs:
     timeout-minutes: 5
     permissions: {}
     steps:
+      # Fails when a job failed or was cancelled. Only the listed jobs may be
+      # skipped; `changes` must run.
       - name: Require every job that ran to pass
-        env:
-          RESULTS: ${{ join(needs.*.result, ' ') }}
-        run: |
-          echo "Job results: ${RESULTS}"
-          case " ${RESULTS} " in
-            *" failure "*|*" cancelled "*) echo "A job failed or was cancelled."; exit 1 ;;
-          esac
+        uses: re-actors/alls-green@b5b5b37504aa4183270bd3d855c52a67f212be35 # v1.3.0
+        with:
+          jobs: ${{ toJSON(needs) }}
+          allowed-skips: fmt, validate, tflint, trivy, site-html, site-links, plan, plan-comment
