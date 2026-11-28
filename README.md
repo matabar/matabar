@@ -8,7 +8,7 @@ commit personal data.
 
 ## Layout
 
-The root holds only repo-wide files (`.github/`, `.githooks/`, `AGENTS.md`, `README.md`, `CODEOWNERS`, `.tool-versions`, `mise.toml`, `package.json`, `nx.json`, `.gitignore`, `.env.example`). Each project lives in its own directory and keeps its own README; this file stays a map.
+The root holds only repo-wide files (`.github/`, `.githooks/`, `AGENTS.md`, `README.md`, `CODEOWNERS`, `.tool-versions`, `mise.toml`, `package.json`, `package-lock.json`, `nx.json`, `CLAUDE.md`, `.gitignore`, `.env.example`). Each project lives in its own directory and keeps its own README; this file stays a map.
 
 | Path | Project | Docs |
 | --- | --- | --- |
