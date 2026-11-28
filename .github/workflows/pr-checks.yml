@@ -139,12 +139,7 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .tool-versions
-      - name: Install html-validate
-        run: |
-          set -euo pipefail
-          want="$(awk '$1 == "npm:html-validate" { print $2 }' .tool-versions)"
-          test "$want" = "11.23.0"
-          npm install --global --ignore-scripts "html-validate@${want}"
+      # check.sh runs npm ci against the committed lockfile.
       - name: HTML validation
         run: .github/scripts/check.sh site-html
 
