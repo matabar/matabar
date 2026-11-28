@@ -25,13 +25,13 @@ updates:
         patterns:
           - "*"
 
-  # html-validate for the apps/site checks, pinned with its dependencies in
-  # .github/site-checks/package-lock.json. A change here runs only the site jobs.
-  # lychee and node are pinned in .tool-versions, which no Dependabot ecosystem reads.
+  # Nx and html-validate, pinned with their dependencies in the root
+  # package-lock.json. A lockfile change affects every project. node, lychee
+  # and the infra tools are pinned in .tool-versions, which no Dependabot
+  # ecosystem reads.
   - package-ecosystem: npm
-    directory: /.github/site-checks
+    directory: /
     schedule:
       interval: weekly
     labels:
       - dependencies
-      - site
