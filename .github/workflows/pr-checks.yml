@@ -23,50 +23,49 @@ jobs:
     permissions:
       contents: read
     outputs:
-      infra: ${{ steps.filter.outputs.infra }}
-      site: ${{ steps.filter.outputs.site }}
+      infra: ${{ steps.filter.outputs.infra == 'true' || steps.tools-infra.outputs.infra == 'true' }}
+      site: ${{ steps.filter.outputs.site == 'true' || steps.tools-site.outputs.site == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+      # Empty token: diff with git against the base branch instead of the API,
+      # so the job needs no pull-requests scope. Branch pushes diff against main.
       - name: Detect affected projects
         id: filter
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          token: ""
+          base: main
+          # .github/ affects every project, except .github/site-checks/, which
+          # cannot change infra checks or plans. .tool-versions is handled below.
+          filters: |
+            infra:
+              - 'infra/**'
+              - '.github/*'
+              - '.github/!(site-checks)/**'
+            site:
+              - 'apps/site/**'
+              - '.github/**'
+            tools:
+              - '.tool-versions'
+      # .tool-versions is compared line by line: a site tool bump (node, lychee)
+      # skips infra and an infra tool bump (opentofu, terragrunt, tflint,
+      # trivy) skips site. paths-filter cannot compare lines.
+      - name: Compare infra tool versions
+        id: tools-infra
+        if: steps.filter.outputs.tools == 'true'
         env:
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: |
-          set -euo pipefail
-          if [ -n "$PR_BASE_SHA" ]; then
-            base="$PR_BASE_SHA"
-          else
-            git fetch --no-tags origin main
-            base="origin/main"
-          fi
-          files="$(git -c core.quotePath=false diff --name-only --no-renames "${base}...HEAD")"
-          echo "Changed files:"
-          printf '%s\n' "$files"
-          infra=false
-          site=false
-          # .github/ affects every project, except the site-only tooling paths
-          # (site-checks, setup-lychee), which cannot change infra checks or plans.
-          # .tool-versions is compared line by line: a site tool bump (node,
-          # lychee) skips infra and an infra tool bump (opentofu, terragrunt,
-          # tflint, trivy) skips site.
-          infra_files="$(printf '%s\n' "$files" | grep -Ev '^\.github/(site-checks/|actions/setup-lychee/)' || true)"
-          tool_files="$(printf '%s\n' "$files" | grep -x '\.tool-versions' || true)"
-          if printf '%s\n' "$infra_files" | grep -Eq '^(infra/|\.github/)'; then
-            infra=true
-          fi
-          if printf '%s\n' "$files" | grep -Eq '^(apps/site/|\.github/)'; then
-            site=true
-          fi
-          if [ -n "$tool_files" ]; then
-            .github/scripts/tool-versions-changed.sh "$base" infra && infra=true
-            .github/scripts/tool-versions-changed.sh "$base" site && site=true
-          fi
-          echo "infra=${infra}" >> "$GITHUB_OUTPUT"
-          echo "site=${site}" >> "$GITHUB_OUTPUT"
-          echo "infra=${infra} site=${site}"
+          BASE: ${{ github.event.pull_request.base.sha || 'origin/main' }}
+        run: .github/scripts/tool-versions-changed.sh "$BASE" infra output
+      - name: Compare site tool versions
+        id: tools-site
+        if: steps.filter.outputs.tools == 'true'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || 'origin/main' }}
+        run: .github/scripts/tool-versions-changed.sh "$BASE" site output
+
   fmt:
     name: fmt
     needs: changes
