@@ -8,14 +8,15 @@ Change `apps/site/index.html` on a `feature/<name>` branch and open a pull reque
 
 ## Checks
 
-The `site` project in `pr-checks` runs when a pull request touches `apps/site/`, `.github/`, or the node or lychee line of `.tool-versions`. See the root [README](../../README.md#pull-request-checks) for how paths map to projects and for the aggregate `ci` check.
+The `site` project is affected by changes under `apps/site/`, the shared CI and tooling files, `.tool-versions`, and the root `package.json` and lockfile. See the root [README](../../README.md#nx-and-pull-request-checks) for affected detection and the aggregate `ci` check.
 
-Two jobs run, with read-only permissions and no cloud credentials:
+Its Nx targets (`apps/site/project.json`) run in jobs with read-only permissions and no cloud credentials:
 
-- `site-html` validates the HTML with [html-validate](https://html-validate.org) (`html-validate:recommended`, config in `.github/site-checks/htmlvalidate.json`).
-- `site-links` runs [lychee](https://lychee.cli.rs). Internal links and fragments are checked offline and strictly; a broken one fails the check. External links are checked in a separate advisory step with retries and a 20 s timeout (403 and 429 count as reachable). That step is `continue-on-error`, so it shows as failed but never fails the job, so an outage of a third-party site cannot block a merge.
+- `html` (job `html`) validates the HTML with [html-validate](https://html-validate.org) (`html-validate:recommended`, config in `apps/site/.htmlvalidate.json`).
+- `links` (job `links`) runs [lychee](https://lychee.cli.rs). Internal links and fragments are checked offline and strictly; a broken one fails the check.
+- `links-external` checks external links with retries and a 20 s timeout (403 and 429 count as reachable). It is advisory: a `continue-on-error` step in the `links` job, so it shows as failed but never fails the job, and an outage of a third-party site cannot block a merge.
 
-Node and lychee are pinned to exact versions in `.tool-versions` (installed in CI by `jdx/mise-action`). html-validate and its dependencies are pinned by `.github/site-checks/package-lock.json` and installed with `npm ci --ignore-scripts`; Dependabot bumps it through the `npm` ecosystem. Dependabot cannot track lychee or node in `.tool-versions`, so bump them by hand. A bump of those touches only the site jobs. Run them locally with `.github/scripts/check.sh site-html`, `site-links`, or `site-links-external`; the first two are also part of `mise run check`.
+Node and lychee are pinned in `.tool-versions` (installed in CI by `jdx/mise-action`). html-validate and Nx are pinned with their dependencies by the root `package-lock.json`, installed with `npm ci --ignore-scripts`; Dependabot bumps them through the `npm` ecosystem. Dependabot cannot track lychee or node, so bump them by hand. Run the checks locally with `npx nx run site:html`, `site:links` or `site:links-external`; `html` and `links` are also part of `mise run check`.
 
 ## Publish
 

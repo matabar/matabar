@@ -22,7 +22,7 @@ former repositories, including the private archive, have been deleted.
   - `infra/modules/gcp/dns-zone`: Public Cloud DNS zone, DNSSEC, and record sets
   - `infra/modules/gcp/github-wif`: Workload Identity Federation for GitHub Actions
   - `infra/modules/github/repos`: This repository: Pages, vulnerability alerts, branch rules, and the production environment
-- `.github/workflows/`: `pr-checks` (fmt, validate, tflint, trivy, plan), `deploy` (plan and gated apply on `main`), `drift` (daily plan), and `terragrunt-run` (shared plan/apply). The `pages` workflow belongs to the site; see [`apps/site/README.md`](../apps/site/README.md).
+- `.github/workflows/`: `pr-checks` (Nx-driven fmt, validate, tflint, trivy, plus plan), `deploy` (plan and gated apply on `main`), `drift` (daily plan), and `terragrunt-run` (shared plan/apply). The `pages` workflow belongs to the site; see [`apps/site/README.md`](../apps/site/README.md).
 - `infra/live/`: Live infrastructure configurations.
   - `infra/live/terragrunt.hcl`: Global Terragrunt settings
   - `infra/live/prod/env.hcl`: Project id, billing account, and organization parent
@@ -326,11 +326,11 @@ means importing the pool and service accounts.
 ## Plan, deploy and drift
 
 The infra jobs `fmt`, `validate`, `tflint`, `trivy`, and `plan / terragrunt`
-run only when `infra` is affected. Otherwise they report as skipped, which
+run only when `infra` is affected (Nx decides: see the root README; the four checks are `infra` targets in `infra/project.json`, run with `npx nx run infra:<target>`). Otherwise they report as skipped, which
 counts as passing. Validate uses `-backend=false` and the committed provider
 lock. `plan` uses Workload Identity and does not lock state. It plans only
 units changed since the pull request base (or `main` on a branch push), plus
-units that depend on them. A change to shared configuration or tooling plans every unit: `infra/root.hcl`, the shared `env.hcl`, `region.hcl`, `provider.hcl` and `terragrunt.hcl`, the `opentofu`, `terragrunt`, `tflint` and `trivy` lines of `.tool-versions` (node and lychee bumps are site-only), `.github/scripts/`, and the `pr-checks`, `deploy`, `drift` and `terragrunt-run` workflows. `infra/.tflint.hcl` and `infra/trivy.yaml` are not on that list because they cannot change a plan. A separate `plan-comment` job, which has no cloud
+units that depend on them. A change to shared configuration or tooling plans every unit: `infra/root.hcl`, the shared `env.hcl`, `region.hcl`, `provider.hcl` and `terragrunt.hcl`, the `opentofu`, `terragrunt`, `tflint` and `trivy` lines of `.tool-versions` (node and lychee bumps still make Nx mark `infra` affected, so `plan` runs, but they select no unit), `.github/scripts/`, and the `pr-checks`, `deploy`, `drift` and `terragrunt-run` workflows. `infra/.tflint.hcl` and `infra/trivy.yaml` are not on that list because they cannot change a plan. A separate `plan-comment` job, which has no cloud
 credentials, posts the log on the pull request with `marocchino/sticky-pull-request-comment`, updating one comment in place (`terragrunt-ci.sh` renders the size-limited `plan.md`). The `drift` issue uses `peter-evans/create-issue-from-file` and `close-issue`. Fork pull requests get no plan.
 The project, state bucket, and GitHub identity units exclude themselves from CI
 plan and apply.
