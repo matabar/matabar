@@ -31,13 +31,14 @@ jobs:
         with:
           fetch-depth: 0
       # Empty token: diff with git against the base branch instead of the API,
-      # so the job needs no pull-requests scope. Branch pushes diff against main.
+      # so the job needs no pull-requests scope. Pull requests diff against their
+      # base branch, branch pushes against main.
       - name: Detect affected projects
         id: filter
         uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         with:
           token: ""
-          base: main
+          base: ${{ github.base_ref || 'main' }}
           # .github/ affects every project, except .github/site-checks/, which
           # cannot change infra checks or plans. .tool-versions is handled below.
           filters: |
