@@ -30,6 +30,10 @@ resource "github_repository" "this" {
   delete_branch_on_merge = true
   allow_update_branch    = true
 
+  # Always the PR title, even for a single-commit PR (the default would use
+  # the commit subject there and bypass the title check).
+  squash_merge_commit_title = "PR_TITLE"
+
   lifecycle {
     prevent_destroy = true
     ignore_changes  = [pages]
