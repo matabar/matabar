@@ -13,7 +13,7 @@ The `site` project in `pr-checks` runs when a pull request touches `apps/site/`,
 Two jobs run, with read-only permissions and no cloud credentials:
 
 - `site-html` validates the HTML with [html-validate](https://html-validate.org) (`html-validate:recommended`, config in `.github/site-checks/htmlvalidate.json`).
-- `site-links` runs [lychee](https://lychee.cli.rs). Internal links and fragments are checked offline and strictly; a broken one fails the check. External links are checked in a separate advisory step with retries and a 20 s timeout (403 and 429 count as reachable). That step only warns, so a third-party outage cannot block a merge.
+- `site-links` runs [lychee](https://lychee.cli.rs). Internal links and fragments are checked offline and strictly; a broken one fails the check. External links are checked in a separate advisory step with retries and a 20 s timeout (403 and 429 count as reachable). That step is `continue-on-error`, so it shows as failed but never fails the job, so an outage of a third-party site cannot block a merge.
 
 Node and lychee are pinned to exact versions in `.tool-versions` (installed in CI by `jdx/mise-action`). html-validate and its dependencies are pinned by `.github/site-checks/package-lock.json` and installed with `npm ci --ignore-scripts`; Dependabot bumps it through the `npm` ecosystem. Dependabot cannot track lychee or node in `.tool-versions`, so bump them by hand. A bump of those touches only the site jobs. Run them locally with `.github/scripts/check.sh site-html`, `site-links`, or `site-links-external`; the first two are also part of `mise run check`.
 
