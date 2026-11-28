@@ -47,11 +47,22 @@ jobs:
           printf '%s\n' "$files"
           infra=false
           site=false
-          if printf '%s\n' "$files" | grep -Eq '^(infra/|\.github/|\.tool-versions$)'; then
+          # .github/ affects every project, except the site-only tooling paths
+          # (site-checks, setup-lychee), which cannot change infra checks or plans.
+          # .tool-versions is compared line by line: a site tool bump (node,
+          # lychee) skips infra and an infra tool bump (opentofu, terragrunt,
+          # tflint, trivy) skips site.
+          infra_files="$(printf '%s\n' "$files" | grep -Ev '^\.github/(site-checks/|actions/setup-lychee/)' || true)"
+          tool_files="$(printf '%s\n' "$files" | grep -x '\.tool-versions' || true)"
+          if printf '%s\n' "$infra_files" | grep -Eq '^(infra/|\.github/)'; then
             infra=true
           fi
-          if printf '%s\n' "$files" | grep -Eq '^(apps/site/|\.github/|\.tool-versions$)'; then
+          if printf '%s\n' "$files" | grep -Eq '^(apps/site/|\.github/)'; then
             site=true
+          fi
+          if [ -n "$tool_files" ]; then
+            .github/scripts/tool-versions-changed.sh "$base" infra && infra=true
+            .github/scripts/tool-versions-changed.sh "$base" site && site=true
           fi
           echo "infra=${infra}" >> "$GITHUB_OUTPUT"
           echo "site=${site}" >> "$GITHUB_OUTPUT"
@@ -155,16 +166,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install lychee
-        run: |
-          set -euo pipefail
-          test "$(awk '$1 == "lychee" { print $2 }' .tool-versions)" = "0.24.2"
-          tmp=$(mktemp -d)
-          curl -fsSL -o "$tmp/lychee.tar.gz" \
-            https://github.com/lycheeverse/lychee/releases/download/lychee-v0.24.2/lychee-x86_64-unknown-linux-gnu.tar.gz
-          echo "1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a  $tmp/lychee.tar.gz" | sha256sum -c -
-          tar -xzf "$tmp/lychee.tar.gz" -C "$tmp"
-          install -m 0755 "$(find "$tmp" -name lychee -type f | head -n1)" /usr/local/bin/lychee
-          rm -rf "$tmp"
+        uses: ./.github/actions/setup-lychee
       # Strict: broken internal links and fragments fail the check. Offline, so
       # it cannot flake on the network.
       - name: Internal links
