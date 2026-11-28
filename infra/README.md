@@ -328,9 +328,17 @@ means importing the pool and service accounts.
 The infra jobs `fmt`, `validate`, `tflint`, `trivy`, and `plan / terragrunt`
 run only when `infra` is affected (Nx decides: see the root README; the four checks are `infra` targets in `infra/project.json`, run with `npx nx run infra:<target>`). Otherwise they report as skipped, which
 counts as passing. Validate uses `-backend=false` and the committed provider
-lock. `plan` uses Workload Identity and does not lock state. It plans only
-units changed since the pull request base (or `main` on a branch push), plus
-units that depend on them. A change to shared configuration or tooling plans every unit: `infra/root.hcl`, the shared `env.hcl`, `region.hcl`, `provider.hcl` and `terragrunt.hcl`, the `opentofu`, `terragrunt`, `tflint` and `trivy` lines of `.tool-versions` (node and lychee bumps still make Nx mark `infra` affected, so `plan` runs, but they select no unit), `.github/scripts/`, and the `pr-checks`, `deploy`, `drift` and `terragrunt-run` workflows. `infra/.tflint.hcl` and `infra/trivy.yaml` are not on that list because they cannot change a plan. A separate `plan-comment` job, which has no cloud
+lock. `plan` uses Workload Identity and does not lock state.
+
+**Unit selection** is Terragrunt's own Git filter, set by the workflow as `TG_FILTER=...[<base>...HEAD]`: the units that changed between the base revision and `HEAD`, plus the units that depend on them. The base is the pull request base SHA, `origin/main` on a branch push, and `github.event.before` on `main`. A unit counts as changed when its own files change or a file it reads changes (Terragrunt tracks reads: `root.hcl`, `env.hcl`, `region.hcl`, `provider.hcl`, and the files of a local module it sources). Nothing script-side computes this. An unknown base revision fails the run instead of silently planning nothing. Because the filter is Git-based, Terragrunt runs each selected unit once, in a temporary Git worktree of `HEAD`; state prefixes (`path_relative_to_include()`) and `get_repo_root()` resolve there exactly as in a normal checkout.
+
+- A change under `infra/` that no unit reads selects no unit, and the plan is empty.
+- A change to CI tooling (`.github/scripts/`, the workflows) or to `.tool-versions` selects no unit either. This is deliberate: the `validate` job already runs on every unit when a tool version changes (Nx marks `infra` affected), and the daily drift plan plans every unit and opens an issue if a tool or workflow change altered a plan. Run the Deploy or Drift workflow from the Actions tab for an immediate full plan.
+- A unit deleted in the range is **not** planned or applied: Terragrunt excludes it unless `--filter-allow-destroy` is given, and CI never passes that flag. Destroying a removed unit stays a deliberate manual step.
+- The three bootstrap units exclude themselves when `CI=true` (local state). The GitHub unit excludes itself when `GITHUB_TOKEN` is empty, which is the case when neither the GitHub App nor `GH_ADMIN_TOKEN` is configured; the workflow sets `GITHUB_TOKEN` to the App token or the PAT.
+- `terragrunt-ci.sh` is the only custom code left. It runs `terragrunt run --all`, sets the `changes` output by searching the log for `Plan: N to ...`, and renders `plan.md`. The run report has per-unit results but no "has changes" field, and `-detailed-exitcode` cannot be used: the aggregate exit code is 2 even when another unit failed with 1, which would hide the failure.
+
+A separate `plan-comment` job, which has no cloud
 credentials, posts the log on the pull request with `marocchino/sticky-pull-request-comment`, updating one comment in place (`terragrunt-ci.sh` renders the size-limited `plan.md`). The `drift` issue uses `peter-evans/create-issue-from-file` and `close-issue`. Fork pull requests get no plan.
 The project, state bucket, and GitHub identity units exclude themselves from CI
 plan and apply.
@@ -345,8 +353,8 @@ identity, so the plan is in the run before anyone approves. When it has
 changes, the `apply` job runs in the `production` environment, waits for the
 required reviewer, locks remote state, and applies the same units with
 `WIF_APPLY_PROVIDER` and `WIF_APPLY_SERVICE_ACCOUNT`. A plan with no changes
-skips the apply. A push with no usable previous commit, or a manual run from
-the Actions tab (`workflow_dispatch`), plans every unit. The concurrency group
+skips the apply. A manual run from the Actions tab (`workflow_dispatch`) has no
+base revision and plans every unit. The concurrency group
 `production-apply` does not cancel an
 apply that is already running.
 
