@@ -119,7 +119,7 @@ jobs:
           TG_NON_INTERACTIVE: "true"
           TG_NO_COLOR: "true"
           TF_INPUT: "false"
-          TF_CLI_ARGS_plan: ${{ inputs.lock && '' || '-lock=false' }}
+          TF_CLI_ARGS_plan: ${{ !inputs.lock && '-lock=false' || '' }}
           # The App token wins; GH_ADMIN_TOKEN is the fallback. With neither
           # the variable is empty and the GitHub unit excludes itself.
           GITHUB_TOKEN: ${{ steps.app.outputs.token || secrets.GH_ADMIN_TOKEN }}
