@@ -1,0 +1,55 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "site",
+  "projectType": "application",
+  "tags": [
+    "type:app",
+    "scope:site"
+  ],
+  "targets": {
+    "html": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "default",
+        "nodeTooling",
+        {
+          "externalDependencies": [
+            "html-validate"
+          ]
+        }
+      ],
+      "options": {
+        "cwd": "{projectRoot}",
+        "command": "html-validate --config .htmlvalidate.json ."
+      }
+    },
+    "links": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "default",
+        {
+          "runtime": "lychee --version"
+        }
+      ],
+      "options": {
+        "cwd": "{projectRoot}",
+        "command": "lychee --offline --include-fragments --no-progress --root-dir \"$PWD\" '**/*.html'"
+      }
+    },
+    "links-external": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "{projectRoot}",
+        "command": "lychee --max-retries 3 --retry-wait-time 5 --timeout 20 --accept '200..=299,403,429' --no-progress --root-dir \"$PWD\" '**/*.html'"
+      },
+      "inputs": [
+        "default",
+        {
+          "runtime": "lychee --version"
+        }
+      ]
+    }
+  }
+}

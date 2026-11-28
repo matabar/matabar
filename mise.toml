@@ -1,33 +1,16 @@
 # Tool versions live in .tool-versions only. This file defines tasks.
+# Checks are Nx targets (see nx.json and each project.json); these tasks call Nx.
+
+[tasks.install]
+description = "Install the Node tooling (Nx, html-validate) from the lockfile"
+run = "npm ci --ignore-scripts"
 
 [tasks.check]
-description = "Run the pull request checks locally (fmt, validate, tflint, trivy, site-html, site-links)"
-run = ".github/scripts/check.sh"
+description = "Run the pull request checks locally on the projects affected by your changes"
+depends = ["install"]
+run = "npx nx affected -t fmt validate tflint trivy html links"
 
-[tasks."check:fmt"]
-description = "Formatting checks"
-run = ".github/scripts/check.sh fmt"
-
-[tasks."check:validate"]
-description = "terragrunt init -backend=false and validate across units"
-run = ".github/scripts/check.sh validate"
-
-[tasks."check:tflint"]
-description = "TFLint"
-run = ".github/scripts/check.sh tflint"
-
-[tasks."check:trivy"]
-description = "Trivy config scan"
-run = ".github/scripts/check.sh trivy"
-
-[tasks."check:site-html"]
-description = "Validate apps/site HTML (html-validate from the lockfile)"
-run = ".github/scripts/check.sh site-html"
-
-[tasks."check:site-links"]
-description = "Check apps/site internal links offline (lychee)"
-run = ".github/scripts/check.sh site-links"
-
-[tasks."check:site-links-external"]
-description = "Check apps/site external links (advisory, needs the network)"
-run = ".github/scripts/check.sh site-links-external"
+[tasks."check:all"]
+description = "Run every check on every project, ignoring what changed"
+depends = ["install"]
+run = "npx nx run-many -t fmt validate tflint trivy html links"

@@ -1,0 +1,48 @@
+{
+  "$schema": "../node_modules/nx/schemas/project-schema.json",
+  "name": "infra",
+  "projectType": "application",
+  "tags": ["type:infra", "scope:platform"],
+  "targets": {
+    "fmt": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "default",
+        { "runtime": "tofu --version" },
+        { "runtime": "terragrunt --version" }
+      ],
+      "options": {
+        "cwd": "{projectRoot}",
+        "commands": ["tofu fmt -check -recursive .", "terragrunt hcl format --check"],
+        "parallel": false
+      }
+    },
+    "validate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "{projectRoot}",
+        "commands": [
+          "terragrunt run --all --non-interactive -- init -backend=false -input=false -lockfile=readonly",
+          "terragrunt run --all --non-interactive -- validate -no-color"
+        ],
+        "parallel": false
+      }
+    },
+    "tflint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "{projectRoot}",
+        "commands": ["tflint --init", "tflint --recursive --config \"$PWD/.tflint.hcl\""],
+        "parallel": false
+      }
+    },
+    "trivy": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "{workspaceRoot}",
+        "command": "trivy config --config infra/trivy.yaml ."
+      }
+    }
+  }
+}
