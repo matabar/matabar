@@ -15,15 +15,24 @@ description = "Install every pinned tool, then the Node tooling (Nx, html-valida
 depends = ["install:tools"]
 run = "npm ci --ignore-scripts"
 
+# mise resolves tools from the directory a command runs in (and its parents),
+# so each project's checks run from that project's directory via `mise exec`;
+# the root config alone only provides node.
 [tasks.check]
 description = "Run the pull request checks locally on the projects affected by your changes"
 depends = ["install"]
-run = "npx nx affected -t fmt validate tflint trivy html links"
+run = """
+(cd infra && mise exec -- npx nx affected -t fmt validate tflint trivy)
+(cd apps/site && mise exec -- npx nx affected -t html links)
+"""
 
 [tasks."check:all"]
 description = "Run every check on every project, ignoring what changed"
 depends = ["install"]
-run = "npx nx run-many -t fmt validate tflint trivy html links"
+run = """
+(cd infra && mise exec -- npx nx run-many -p infra -t fmt validate tflint trivy)
+(cd apps/site && mise exec -- npx nx run-many -p site -t html links)
+"""
 
 [tasks.pre-commit]
 description = "Git pre-commit hook: refuse commits on main, format staged HCL and Terraform files. Install with: mise generate git-pre-commit --write --task=pre-commit"
@@ -32,8 +41,8 @@ run = """
 for f in $STAGED; do
   [ -f "$f" ] || continue
   case "$f" in
-    *.tf) tofu fmt "$f" ;;
-    *.hcl) terragrunt hcl format --file "$f" ;;
+    *.tf) (cd infra && mise exec -- tofu fmt "${f#infra/}") ;;
+    *.hcl) (cd infra && mise exec -- terragrunt hcl format --file "${f#infra/}") ;;
     *) continue ;;
   esac
   git add -- "$f"

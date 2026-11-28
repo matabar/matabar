@@ -1,6 +1,7 @@
 name: Setup Nx
 description: >-
-  Installs the tools pinned in a directory (and its parents) with mise, installs Nx from the lockfile and sets
+  Installs the tools pinned in a directory (and its parents)
+  with mise, installs Nx from the lockfile and sets
   NX_BASE and NX_HEAD for `nx affected`. Run actions/checkout with
   fetch-depth: 0 first. Callers need `actions: read` for branch pushes.
 inputs:
