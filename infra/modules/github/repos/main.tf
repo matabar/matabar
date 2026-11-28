@@ -21,13 +21,18 @@ resource "github_repository" "this" {
   has_projects = true
   has_wiki     = false
 
-  # Linear history: squash or rebase, never a merge commit.
+  # Squash only: the pull request title becomes the commit subject, so the
+  # title check covers every commit on main.
   allow_merge_commit     = false
   allow_squash_merge     = true
-  allow_rebase_merge     = true
+  allow_rebase_merge     = false
   allow_auto_merge       = false
   delete_branch_on_merge = true
   allow_update_branch    = true
+
+  # Always the PR title, even for a single-commit PR (the default would use
+  # the commit subject there and bypass the title check).
+  squash_merge_commit_title = "PR_TITLE"
 
   lifecycle {
     prevent_destroy = true
@@ -121,7 +126,7 @@ resource "github_repository_ruleset" "main" {
     pull_request {
       required_approving_review_count = 0
       dismiss_stale_reviews_on_push   = true
-      allowed_merge_methods           = ["squash", "rebase"]
+      allowed_merge_methods           = ["squash"]
     }
 
     required_status_checks {

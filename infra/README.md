@@ -70,10 +70,9 @@ the merge is not blocked by the new required checks. The deploy workflow on
 `main` fails until the steps below are done; re-run it at the end.
 
 Install OpenTofu 1.13.10, Terragrunt 1.2.3, TFLint 0.66.0, and Trivy 0.76.2
-(`mise install` reads `.tool-versions`). Then:
+(`mise install` reads `.tool-versions`). Install the pre-commit hook (see the root README, "Git hook"). Then:
 
 ```bash
-git config core.hooksPath .githooks
 gcloud auth login
 gcloud auth application-default login
 ```
@@ -228,7 +227,7 @@ its `apply` job in the `production` environment after reading the `plan` job.
 
 Downstream stacks reference upstream outputs via `dependency` blocks. Each dependency defines `mock_outputs` — placeholder values Terragrunt substitutes when upstream state is unavailable. Mocks are used only for `init`, `validate`, and `plan` (via `mock_outputs_allowed_terraform_commands`); `apply` always requires real upstream outputs.
 
-This lets you run `terragrunt validate` or `plan` on a stack before its dependencies are applied (e.g. on a fresh clone). The pre-push hook runs `terragrunt validate` on changed stacks and relies on mocks when upstream state is missing.
+This lets you run `terragrunt validate` or `plan` on a stack before its dependencies are applied (e.g. on a fresh clone). The `validate` check in CI runs `terragrunt validate` on every stack and relies on mocks when upstream state is missing.
 
 When adding a new `dependency.*.outputs.*` reference in `inputs`, add the matching key to that dependency's `mock_outputs`.
 
@@ -263,7 +262,7 @@ Dependabot vulnerability alerts for `matabar` are a
 import block adopts the alerts already present on the repository. The
 deprecated `vulnerability_alerts` argument is not set on `github_repository`.
 
-`main` requires a pull request, linear history (squash or rebase), and
+`main` requires a pull request, linear history (squash merges only, so the pull request title is the commit subject), and
 rejects force pushes. It also requires the single status check `ci`, the aggregate job of the PR
 checks workflow. It always runs and fails if any project job failed or was
 cancelled, so adding a project never changes the ruleset. The production

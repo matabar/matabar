@@ -14,3 +14,18 @@ run = "npx nx affected -t fmt validate tflint trivy html links"
 description = "Run every check on every project, ignoring what changed"
 depends = ["install"]
 run = "npx nx run-many -t fmt validate tflint trivy html links"
+
+[tasks.pre-commit]
+description = "Git pre-commit hook: refuse commits on main, format staged HCL and Terraform files. Install with: mise generate git-pre-commit --write --task=pre-commit"
+run = """
+[ "$(git branch --show-current)" != main ] || { echo "Commits on main are blocked: use a feature branch." >&2; exit 1; }
+for f in $STAGED; do
+  [ -f "$f" ] || continue
+  case "$f" in
+    *.tf) tofu fmt "$f" ;;
+    *.hcl) terragrunt hcl format --file "$f" ;;
+    *) continue ;;
+  esac
+  git add -- "$f"
+done
+"""

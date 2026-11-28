@@ -2,6 +2,9 @@ name: PR checks
 
 on:
   pull_request:
+    # `edited` re-runs the checks when the title changes, so fixing a title
+    # turns the title check green without a new commit.
+    types: [opened, synchronize, reopened, edited]
   push:
     branches-ignore:
       - main
@@ -239,11 +242,49 @@ jobs:
           header: terragrunt-plan
           message: Plan log was not produced.
 
+  # Conventional Commits on the pull request title. Squash merges (the only
+  # allowed method) use it as the commit subject on main. Runs on
+  # `pull_request`, so fork pull requests get a read-only token and no secrets;
+  # the action only reads the title and needs no write permission.
+  title:
+    name: title
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read
+    steps:
+      - name: Check the pull request title
+        uses: amannn/action-semantic-pull-request@66e72920af32222769c386d81f89656ebcb6d6d5 # v6.1.4
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            build
+            ci
+            chore
+            revert
+          # Keep in sync with the commit scopes in AGENTS.md.
+          scopes: |
+            infra
+            site
+            ci
+            deps
+            repo
+          requireScope: false
+
   # The single check to require. It always runs and fails when any job that
   # ran failed or was cancelled. Skipped jobs are fine. Add new jobs to needs.
   ci:
     name: ci
-    needs: [changes, fmt, validate, tflint, trivy, html, links, plan, plan-comment]
+    needs: [changes, title, fmt, validate, tflint, trivy, html, links, plan, plan-comment]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -255,4 +296,4 @@ jobs:
         uses: re-actors/alls-green@b5b5b37504aa4183270bd3d855c52a67f212be35 # v1.3.0
         with:
           jobs: ${{ toJSON(needs) }}
-          allowed-skips: fmt, validate, tflint, trivy, html, links, plan, plan-comment
+          allowed-skips: title, fmt, validate, tflint, trivy, html, links, plan, plan-comment
