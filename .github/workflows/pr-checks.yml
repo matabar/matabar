@@ -69,11 +69,8 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup tools
         uses: ./.github/actions/setup-tools
-      - name: OpenTofu fmt
-        run: tofu fmt -check -recursive infra
-      - name: Terragrunt hcl format
-        working-directory: infra
-        run: terragrunt hcl format --check
+      - name: Format check
+        run: .github/scripts/check.sh fmt
 
   validate:
     name: validate
@@ -89,11 +86,7 @@ jobs:
       - name: Setup tools
         uses: ./.github/actions/setup-tools
       - name: Init and validate
-        working-directory: infra
-        run: |
-          set -euo pipefail
-          terragrunt run --all --non-interactive -- init -backend=false -input=false -lockfile=readonly
-          terragrunt run --all --non-interactive -- validate -no-color
+        run: .github/scripts/check.sh validate
 
   tflint:
     name: tflint
@@ -113,10 +106,7 @@ jobs:
           # tflint --init downloads the google ruleset from the GitHub API.
           # Unauthenticated calls share a per-IP limit on hosted runners.
           GITHUB_TOKEN: ${{ github.token }}
-        working-directory: infra
-        run: |
-          tflint --init
-          tflint --recursive --config "${GITHUB_WORKSPACE}/infra/.tflint.hcl"
+        run: .github/scripts/check.sh tflint
 
   trivy:
     name: trivy
@@ -132,7 +122,7 @@ jobs:
       - name: Setup tools
         uses: ./.github/actions/setup-tools
       - name: Trivy config
-        run: trivy config --config infra/trivy.yaml .
+        run: .github/scripts/check.sh trivy
 
   site-html:
     name: site-html
