@@ -9,198 +9,174 @@ on:
 permissions:
   contents: read
 
+env:
+  # Local caching only: never connect to Nx Cloud.
+  NX_NO_CLOUD: "true"
+
 concurrency:
   group: pr-checks-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # Maps changed paths to projects. Every other job keys off these outputs.
-  # Shared CI and tooling files (.github/, .tool-versions) affect every project.
+  # Asks Nx which projects the change affects. Every other job keys off the
+  # `projects` output. Affected detection and its inputs are in nx.json and
+  # each project.json.
   changes:
     name: changes
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: read
+      actions: read
     outputs:
-      infra: ${{ steps.filter.outputs.infra == 'true' || steps.tools-infra.outputs.infra == 'true' }}
-      site: ${{ steps.filter.outputs.site == 'true' || steps.tools-site.outputs.site == 'true' }}
+      projects: ${{ steps.affected.outputs.projects }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      # Empty token: diff with git against the base branch instead of the API,
-      # so the job needs no pull-requests scope. Pull requests diff against their
-      # base branch, branch pushes against main.
-      - name: Detect affected projects
-        id: filter
-        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+      - name: Setup Nx
+        uses: ./.github/actions/setup-nx
         with:
-          token: ""
-          base: ${{ github.base_ref || 'main' }}
-          # .github/ affects every project, except .github/site-checks/, which
-          # cannot change infra checks or plans. .tool-versions is handled below.
-          filters: |
-            infra:
-              - 'infra/**'
-              - '.github/*'
-              - '.github/!(site-checks)/**'
-            site:
-              - 'apps/site/**'
-              - '.github/**'
-            tools:
-              - '.tool-versions'
-      # .tool-versions is compared line by line: a site tool bump (node, lychee)
-      # skips infra and an infra tool bump (opentofu, terragrunt, tflint,
-      # trivy) skips site. paths-filter cannot compare lines.
-      - name: Compare infra tool versions
-        id: tools-infra
-        if: steps.filter.outputs.tools == 'true'
-        env:
-          BASE: ${{ github.event.pull_request.base.sha || 'origin/main' }}
-        run: .github/scripts/tool-versions-changed.sh "$BASE" infra output
-      - name: Compare site tool versions
-        id: tools-site
-        if: steps.filter.outputs.tools == 'true'
-        env:
-          BASE: ${{ github.event.pull_request.base.sha || 'origin/main' }}
-        run: .github/scripts/tool-versions-changed.sh "$BASE" site output
+          tools: node
+      - name: List affected projects
+        id: affected
+        run: .github/scripts/nx-affected-projects.sh
 
   fmt:
     name: fmt
     needs: changes
-    if: needs.changes.outputs.infra == 'true'
+    if: contains(fromJSON(needs.changes.outputs.projects), 'infra')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read
+      actions: read
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Setup tools
-        uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
         with:
-          version: 2026.11.14
-          install_args: opentofu terragrunt tflint trivy
-          # These tools run with cloud credentials in some jobs: no shared cache.
-          cache: false
-      - name: Format check
-        run: .github/scripts/check.sh fmt
+          fetch-depth: 0
+      - name: Setup Nx
+        uses: ./.github/actions/setup-nx
+        with:
+          tools: node opentofu terragrunt tflint trivy
+      - name: nx affected fmt
+        run: npx nx affected -t fmt
 
   validate:
     name: validate
     needs: changes
-    if: needs.changes.outputs.infra == 'true'
+    if: contains(fromJSON(needs.changes.outputs.projects), 'infra')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
+      actions: read
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Setup tools
-        uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
         with:
-          version: 2026.11.14
-          install_args: opentofu terragrunt tflint trivy
-          # These tools run with cloud credentials in some jobs: no shared cache.
-          cache: false
-      - name: Init and validate
-        run: .github/scripts/check.sh validate
+          fetch-depth: 0
+      - name: Setup Nx
+        uses: ./.github/actions/setup-nx
+        with:
+          tools: node opentofu terragrunt tflint trivy
+      - name: nx affected validate
+        run: npx nx affected -t validate
 
   tflint:
     name: tflint
     needs: changes
-    if: needs.changes.outputs.infra == 'true'
+    if: contains(fromJSON(needs.changes.outputs.projects), 'infra')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read
+      actions: read
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Setup tools
-        uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
         with:
-          version: 2026.11.14
-          install_args: opentofu terragrunt tflint trivy
-          # These tools run with cloud credentials in some jobs: no shared cache.
-          cache: false
-      - name: TFLint
+          fetch-depth: 0
+      - name: Setup Nx
+        uses: ./.github/actions/setup-nx
+        with:
+          tools: node opentofu terragrunt tflint trivy
+      - name: nx affected tflint
         env:
           # tflint --init downloads the google ruleset from the GitHub API.
           # Unauthenticated calls share a per-IP limit on hosted runners.
           GITHUB_TOKEN: ${{ github.token }}
-        run: .github/scripts/check.sh tflint
+        run: npx nx affected -t tflint
 
   trivy:
     name: trivy
     needs: changes
-    if: needs.changes.outputs.infra == 'true'
+    if: contains(fromJSON(needs.changes.outputs.projects), 'infra')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read
+      actions: read
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Setup tools
-        uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
         with:
-          version: 2026.11.14
-          install_args: opentofu terragrunt tflint trivy
-          # These tools run with cloud credentials in some jobs: no shared cache.
-          cache: false
-      - name: Trivy config
-        run: .github/scripts/check.sh trivy
+          fetch-depth: 0
+      - name: Setup Nx
+        uses: ./.github/actions/setup-nx
+        with:
+          tools: node opentofu terragrunt tflint trivy
+      - name: nx affected trivy
+        run: npx nx affected -t trivy
 
-  site-html:
-    name: site-html
+  html:
+    name: html
     needs: changes
-    if: needs.changes.outputs.site == 'true'
+    if: contains(fromJSON(needs.changes.outputs.projects), 'site')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read
+      actions: read
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Setup Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version-file: .tool-versions
-      # check.sh runs npm ci against the committed lockfile.
-      - name: HTML validation
-        run: .github/scripts/check.sh site-html
+          fetch-depth: 0
+      - name: Setup Nx
+        uses: ./.github/actions/setup-nx
+        with:
+          tools: node
+      - name: nx affected html
+        run: npx nx affected -t html
 
-  site-links:
-    name: site-links
+  links:
+    name: links
     needs: changes
-    if: needs.changes.outputs.site == 'true'
+    if: contains(fromJSON(needs.changes.outputs.projects), 'site')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read
+      actions: read
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Install lychee
-        uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
         with:
-          version: 2026.11.14
-          install_args: lychee
-          # These tools run with cloud credentials in some jobs: no shared cache.
-          cache: false
-      # Strict: broken internal links and fragments fail the check. Offline, so
-      # it cannot flake on the network.
-      - name: Internal links
-        run: .github/scripts/check.sh site-links
+          fetch-depth: 0
+      - name: Setup Nx
+        uses: ./.github/actions/setup-nx
+        with:
+          tools: node lychee
+      - name: nx affected links
+        run: npx nx affected -t links
       # Advisory: external sites can be down or rate-limit CI. Retries are
       # enabled and a failure never fails the job (it shows on the step).
       - name: External links (advisory)
         continue-on-error: true
-        run: .github/scripts/check.sh site-links-external
+        run: npx nx affected -t links-external
 
   plan:
     name: plan
@@ -215,7 +191,7 @@ jobs:
       id-token: write
     uses: ./.github/workflows/terragrunt-run.yml
     with:
-      enabled: ${{ needs.changes.outputs.infra == 'true' }}
+      enabled: ${{ contains(fromJSON(needs.changes.outputs.projects), 'infra') }}
       mode: plan
       affected: true
       lock: false
@@ -233,7 +209,7 @@ jobs:
     needs: [changes, plan]
     if: >-
       always() && github.event_name == 'pull_request' &&
-      needs.changes.outputs.infra == 'true' && needs.plan.result != 'skipped'
+      contains(fromJSON(needs.changes.outputs.projects), 'infra') && needs.plan.result != 'skipped'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -267,7 +243,7 @@ jobs:
   # ran failed or was cancelled. Skipped jobs are fine. Add new jobs to needs.
   ci:
     name: ci
-    needs: [changes, fmt, validate, tflint, trivy, site-html, site-links, plan, plan-comment]
+    needs: [changes, fmt, validate, tflint, trivy, html, links, plan, plan-comment]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -279,4 +255,4 @@ jobs:
         uses: re-actors/alls-green@b5b5b37504aa4183270bd3d855c52a67f212be35 # v1.3.0
         with:
           jobs: ${{ toJSON(needs) }}
-          allowed-skips: fmt, validate, tflint, trivy, site-html, site-links, plan, plan-comment
+          allowed-skips: fmt, validate, tflint, trivy, html, links, plan, plan-comment
