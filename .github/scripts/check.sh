@@ -66,10 +66,14 @@ trivy_check() {
   trivy config --config infra/trivy.yaml .
 }
 
-# apps/site checks. CI installs the same pinned versions (see .tool-versions).
+# apps/site checks. Tool versions: .tool-versions (node, lychee) and
+# .github/site-checks/package-lock.json (html-validate).
+# html-validate comes from the committed lockfile in .github/site-checks
+# (npm ci), so its transitive dependencies are pinned too. Lifecycle scripts are off.
 site_html() {
-  need html-validate npm:html-validate
-  html-validate --config .github/site-checks/htmlvalidate.json apps/site
+  need node node
+  npm ci --ignore-scripts --no-audit --no-fund --prefix .github/site-checks
+  .github/site-checks/node_modules/.bin/html-validate --config .github/site-checks/htmlvalidate.json apps/site
 }
 
 # Internal links and fragments are checked strictly and offline.
@@ -102,7 +106,7 @@ case "${1:-all}" in
   all)
     # Check every tool up front so a missing one fails before any slow step.
     need tofu opentofu; need terragrunt terragrunt; need tflint tflint; need trivy trivy
-    need html-validate npm:html-validate; need lychee lychee
+    need node node; need lychee lychee
     failed=""
     # Re-run this script per step: set -e is ignored inside a function called
     # from an "||" list, which would hide early failures.

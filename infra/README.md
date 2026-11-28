@@ -330,7 +330,7 @@ run only when `infra` is affected. Otherwise they report as skipped, which
 counts as passing. Validate uses `-backend=false` and the committed provider
 lock. `plan` uses Workload Identity and does not lock state. It plans only
 units changed since the pull request base (or `main` on a branch push), plus
-units that depend on them. A change to shared configuration or tooling plans every unit: `infra/root.hcl`, the shared `env.hcl`, `region.hcl`, `provider.hcl` and `terragrunt.hcl`, `.tool-versions`, `.github/actions/setup-tools/`, `.github/scripts/`, and the `pr-checks`, `deploy`, `drift` and `terragrunt-run` workflows. `infra/.tflint.hcl` and `infra/trivy.yaml` are not on that list because they cannot change a plan. A separate `plan-comment` job, which has no cloud
+units that depend on them. A change to shared configuration or tooling plans every unit: `infra/root.hcl`, the shared `env.hcl`, `region.hcl`, `provider.hcl` and `terragrunt.hcl`, the `opentofu`, `terragrunt`, `tflint` and `trivy` lines of `.tool-versions` (node and lychee bumps are site-only), `.github/actions/setup-tools/`, `.github/scripts/`, and the `pr-checks`, `deploy`, `drift` and `terragrunt-run` workflows. `infra/.tflint.hcl` and `infra/trivy.yaml` are not on that list because they cannot change a plan. A separate `plan-comment` job, which has no cloud
 credentials, posts the log on the pull request. Fork pull requests get no plan.
 The project, state bucket, and GitHub identity units exclude themselves from CI
 plan and apply.

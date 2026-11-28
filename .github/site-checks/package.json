@@ -1,0 +1,8 @@
+{
+  "name": "site-checks",
+  "private": true,
+  "description": "Pinned tooling for the apps/site checks. Install with npm ci.",
+  "devDependencies": {
+    "html-validate": "11.23.0"
+  }
+}

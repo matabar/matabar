@@ -33,3 +33,6 @@ terragrunt-debug.tfvars
 # OS files
 .DS_Store
 Thumbs.db
+
+# Site check tooling (npm ci)
+node_modules/
