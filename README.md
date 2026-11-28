@@ -53,7 +53,7 @@ mise run check          # or: .github/scripts/check.sh [fmt|validate|tflint|triv
 
 It fails at once, naming the tool, if one is missing (`mise install` installs
 all of them from `.tool-versions`) and warns when a version differs from the
-pin. `tflint --init` downloads a ruleset from the GitHub API; set `GITHUB_TOKEN` if you hit its rate limit. `.github/scripts/check.sh` mirrors `pr-checks.yml`; change both together. Tool versions are pinned in `.tool-versions`.
+pin. `tflint --init` downloads a ruleset from the GitHub API; set `GITHUB_TOKEN` if you hit its rate limit. Each job in `pr-checks.yml` runs `.github/scripts/check.sh <step>`, so CI and the local command are one definition; change a check in the script. In CI, a tool that is not the pinned version fails the job; locally it only warns. Tool versions are pinned in `.tool-versions`.
 
 ## Git Hooks
 

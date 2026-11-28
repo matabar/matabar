@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Run the pull request checks locally: fmt, validate, tflint, trivy (infra) and
 # site-html, site-links (apps/site).
-# The commands mirror .github/workflows/pr-checks.yml. Change both together.
+# This script is the single definition of each check: the jobs in
+# .github/workflows/pr-checks.yml run it as `.github/scripts/check.sh <step>`.
+# Change a check here, not in the workflow. In CI (CI=true) a tool that is not the
+# pinned version is an error; locally it is a warning.
 #
 # Usage: check.sh [fmt|validate|tflint|trivy|site-html|site-links|site-links-external|all]   (default: all)
 # site-links-external is advisory (network) and not part of all.
@@ -12,7 +15,7 @@ cd "$root"
 
 want() { awk -v key="$1" '$1 == key { print $2 }' .tool-versions; }
 
-# Fail early and clearly when a tool is missing; warn when it is not the pinned version.
+# Fail early and clearly when a tool is missing; when it is not the pinned version, warn locally and fail in CI.
 need() {
   local tool=$1 pin=$2 have
   if ! command -v "$tool" >/dev/null 2>&1; then
@@ -22,7 +25,13 @@ need() {
   have=$("$tool" --version 2>&1 | head -n1 || true)
   case "$have" in
     *"$(want "$pin")"*) ;;
-    *) echo "WARN: $tool is not the pinned $(want "$pin") (found: $have). CI uses the pinned version." >&2 ;;
+    *)
+      if [ "${CI:-}" = "true" ]; then
+        echo "ERROR: $tool is not the pinned $(want "$pin") (found: $have)." >&2
+        exit 1
+      fi
+      echo "WARN: $tool is not the pinned $(want "$pin") (found: $have). CI uses the pinned version." >&2
+      ;;
   esac
 }
 
