@@ -1,8 +1,18 @@
-# Tool versions live in .tool-versions only. This file defines tasks.
+# Tool versions live next to the project that uses them (infra/.tool-versions,
+# apps/site/.tool-versions); node is pinned in the root .tool-versions. This
+# file defines tasks.
 # Checks are Nx targets (see nx.json and each project.json); these tasks call Nx.
 
+[tasks."install:tools"]
+description = "Install every pinned tool: mise reads the config of the directory it runs in and its parents, so run it in each project"
+run = """
+(cd infra && mise install)
+(cd apps/site && mise install)
+"""
+
 [tasks.install]
-description = "Install the Node tooling (Nx, html-validate) from the lockfile"
+description = "Install every pinned tool, then the Node tooling (Nx, html-validate) from the lockfile"
+depends = ["install:tools"]
 run = "npm ci --ignore-scripts"
 
 [tasks.check]

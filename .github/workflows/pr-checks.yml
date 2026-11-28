@@ -41,7 +41,7 @@ jobs:
       - name: Setup Nx
         uses: ./.github/actions/setup-nx
         with:
-          tools: node
+          working_directory: .
       - name: List affected projects
         id: affected
         run: .github/scripts/nx-affected-projects.sh
@@ -63,7 +63,7 @@ jobs:
       - name: Setup Nx
         uses: ./.github/actions/setup-nx
         with:
-          tools: node opentofu terragrunt tflint trivy
+          working_directory: infra
       - name: nx affected fmt
         run: npx nx affected -t fmt
 
@@ -84,7 +84,7 @@ jobs:
       - name: Setup Nx
         uses: ./.github/actions/setup-nx
         with:
-          tools: node opentofu terragrunt tflint trivy
+          working_directory: infra
       - name: nx affected validate
         run: npx nx affected -t validate
 
@@ -105,7 +105,7 @@ jobs:
       - name: Setup Nx
         uses: ./.github/actions/setup-nx
         with:
-          tools: node opentofu terragrunt tflint trivy
+          working_directory: infra
       - name: nx affected tflint
         env:
           # tflint --init downloads the google ruleset from the GitHub API.
@@ -130,7 +130,7 @@ jobs:
       - name: Setup Nx
         uses: ./.github/actions/setup-nx
         with:
-          tools: node opentofu terragrunt tflint trivy
+          working_directory: infra
       - name: nx affected trivy
         run: npx nx affected -t trivy
 
@@ -151,7 +151,7 @@ jobs:
       - name: Setup Nx
         uses: ./.github/actions/setup-nx
         with:
-          tools: node
+          working_directory: apps/site
       - name: nx affected html
         run: npx nx affected -t html
 
@@ -172,7 +172,7 @@ jobs:
       - name: Setup Nx
         uses: ./.github/actions/setup-nx
         with:
-          tools: node lychee
+          working_directory: apps/site
       - name: nx affected links
         run: npx nx affected -t links
       # Advisory: external sites can be down or rate-limit CI. Retries are

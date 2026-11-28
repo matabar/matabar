@@ -1,6 +1,1 @@
-opentofu 1.13.10
-terragrunt 1.2.3
-tflint 0.66.0
-trivy 0.76.2
 node 24.22.3
-lychee 0.24.2

@@ -8,7 +8,7 @@ Change `apps/site/index.html` on a `feature/<name>` branch and open a pull reque
 
 ## Checks
 
-The `site` project is affected by changes under `apps/site/`, the shared CI and tooling files, `.tool-versions`, and the root `package.json` and lockfile. See the root [README](../../README.md#nx-and-pull-request-checks) for affected detection and the aggregate `ci` check.
+The `site` project is affected by changes under `apps/site/`, the shared CI and tooling files, the root `.tool-versions` (node), and the root `package.json` and lockfile. See the root [README](../../README.md#nx-and-pull-request-checks) for affected detection and the aggregate `ci` check.
 
 Its Nx targets (`apps/site/project.json`) run in jobs with read-only permissions and no cloud credentials:
 
@@ -16,7 +16,7 @@ Its Nx targets (`apps/site/project.json`) run in jobs with read-only permissions
 - `links` (job `links`) runs [lychee](https://lychee.cli.rs). Internal links and fragments are checked offline and strictly; a broken one fails the check.
 - `links-external` checks external links with retries and a 20 s timeout (403 and 429 count as reachable). It is advisory: a `continue-on-error` step in the `links` job, so it shows as failed but never fails the job, and an outage of a third-party site cannot block a merge.
 
-Node and lychee are pinned in `.tool-versions` (installed in CI by `jdx/mise-action`). html-validate and Nx are pinned with their dependencies by the root `package-lock.json`, installed with `npm ci --ignore-scripts`; Dependabot bumps them through the `npm` ecosystem. Dependabot cannot track lychee or node, so bump them by hand. Run the checks locally with `npx nx run site:html`, `site:links` or `site:links-external`; `html` and `links` are also part of `mise run check`.
+Lychee is pinned in `apps/site/.tool-versions` and node in the root `.tool-versions` (installed in CI by `jdx/mise-action` with `working_directory: apps/site`). Bumping lychee affects only `site`; bumping node affects both projects. html-validate and Nx are pinned with their dependencies by the root `package-lock.json`, installed with `npm ci --ignore-scripts`; Dependabot bumps them through the `npm` ecosystem. Dependabot cannot track lychee or node, so bump them by hand. Run the checks locally with `npx nx run site:html`, `site:links` or `site:links-external`; `html` and `links` are also part of `mise run check`.
 
 ## Publish
 
