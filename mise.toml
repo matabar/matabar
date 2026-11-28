@@ -6,6 +6,7 @@
 [tasks."install:tools"]
 description = "Install every pinned tool: mise reads the config of the directory it runs in and its parents, so run it in each project"
 run = """
+set -e
 (cd infra && mise install)
 (cd apps/site && mise install)
 """
@@ -22,6 +23,7 @@ run = "npm ci --ignore-scripts"
 description = "Run the pull request checks locally on the projects affected by your changes"
 depends = ["install"]
 run = """
+set -e
 (cd infra && mise exec -- npx nx affected -t fmt validate tflint trivy)
 (cd apps/site && mise exec -- npx nx affected -t html links)
 """
@@ -30,6 +32,7 @@ run = """
 description = "Run every check on every project, ignoring what changed"
 depends = ["install"]
 run = """
+set -e
 (cd infra && mise exec -- npx nx run-many -p infra -t fmt validate tflint trivy)
 (cd apps/site && mise exec -- npx nx run-many -p site -t html links)
 """
